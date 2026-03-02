@@ -522,13 +522,20 @@ function applyOp(aActual, bActual, o) {
       return r;
     }
     case '÷': {
+      // 被除数：実際文→名目に変換して百文緡と端数に分解
+      const aNom = actualToNominal(aActual);
+      // 除数：名目のまま整数として使う
       const bNom = actualToNominal(bActual);
       if (bNom === 0) return null;
-      if (bNom > 5000 || actualToNominal(aActual) > 500000) return { q: Math.round(aActual / bActual), rem: 0 };
-      let rem = aActual; let q = 0;
-      const bSub = nominalToActual(bNom);
-      while (rem >= bSub) { rem = shomakuSubNominal(rem, bSub); q++; }
-      return { q, rem };
+      const aH = Math.floor(aNom / 100);
+      const aL = aNom % 100;
+      const aLActual = aL === 50 ? 49 : aL;
+      const qH = Math.floor(aH / bNom);
+      const remH = aH % bNom;
+      const combined = remH * 97 + aLActual;
+      const qL = Math.floor(combined / bNom);
+      const rem = combined % bNom;
+      return { q: qH * 100 + qL, rem };
     }
   }
 }
@@ -539,10 +546,11 @@ function compute() {
   if (result === null) {
     currentNominalStr = 'エラー'; currentActual = 0;
   } else if (op === '÷' && typeof result === 'object') {
-    setCurrentFromActual(result.q);
+    // result.qは名目文数
+    currentActual = nominalToActual(result.q);
+    currentNominalStr = String(result.q);
     if (result.rem > 0) {
-      const remNom = actualToNominal(result.rem);
-      currentNominalStr = String(actualToNominal(result.q)) + ' 余 ' + remNom;
+      currentNominalStr = String(result.q) + ' 余 ' + result.rem;
     }
   } else {
     setCurrentFromActual(result);
