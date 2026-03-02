@@ -428,6 +428,7 @@ let current = '0';
 let prevVal = null;
 let op = null;
 let justComputed = false;
+let waitingForOperand = false;
 
 function updateDisplay() {
   const disp = document.getElementById('disp');
@@ -459,9 +460,10 @@ function updateDisplay() {
 }
 
 function inputDigit(d) {
-  if (justComputed) {
+  if (justComputed || waitingForOperand) {
     current = d;
     justComputed = false;
+    waitingForOperand = false;
   } else {
     current = current === '0' ? d : current + d;
   }
@@ -470,7 +472,7 @@ function inputDigit(d) {
 }
 
 function input10() {
-  if (justComputed) { current = '10'; justComputed = false; }
+  if (justComputed || waitingForOperand) { current = '10'; justComputed = false; waitingForOperand = false; }
   else if (current === '0') { current = '10'; }
   else { current = current + '0'; }
   if (current.length > 10) current = current.slice(0, 10);
@@ -478,7 +480,7 @@ function input10() {
 }
 
 function input100() {
-  if (justComputed) { current = '100'; justComputed = false; }
+  if (justComputed || waitingForOperand) { current = '100'; justComputed = false; waitingForOperand = false; }
   else if (current === '0') { current = '100'; }
   else { current = current + '00'; }
   if (current.length > 10) current = current.slice(0, 10);
@@ -487,13 +489,12 @@ function input100() {
 
 function inputOp(o) {
   justComputed = false;
-  if (prevVal !== null && op) {
-    // chain calculation
+  if (prevVal !== null && op && !waitingForOperand) {
     current = String(applyOp(prevVal, parseFloat(current), op));
   }
   prevVal = parseFloat(current);
   op = o;
-  current = '0';
+  waitingForOperand = true;
   updateDisplay();
 }
 
@@ -517,6 +518,7 @@ function compute() {
   prevVal = null;
   op = null;
   justComputed = true;
+  waitingForOperand = false;
   updateDisplay();
 }
 
@@ -525,6 +527,7 @@ function clearAll() {
   prevVal = null;
   op = null;
   justComputed = false;
+  waitingForOperand = false;
   updateDisplay();
 }
 
