@@ -439,7 +439,9 @@ function updateDisplay() {
     dispOp.textContent = '';
   }
 
-  if (currentActual !== 0) {
+  if (currentNominalStr.includes('余')) {
+    dispActual.textContent = '';
+  } else if (currentActual !== 0) {
     const nom = parseInt(currentNominalStr);
     if (!isNaN(nom) && nom !== currentActual) {
       dispActual.textContent = '実際 ' + currentActual + ' 文';
@@ -495,7 +497,10 @@ function inputOp(o) {
   justComputed = false;
   if (prevActual !== null && op && !waitingForOperand) {
     const result = applyOp(prevActual, currentActual, op);
-    if (result !== null) { prevActual = result; setCurrentFromActual(result); }
+    if (result !== null) {
+      const val = (typeof result === 'object') ? result.q : result;
+      prevActual = val; setCurrentFromActual(val);
+    }
   } else {
     prevActual = currentActual;
   }
@@ -519,11 +524,11 @@ function applyOp(aActual, bActual, o) {
     case '÷': {
       const bNom = actualToNominal(bActual);
       if (bNom === 0) return null;
-      if (bNom > 5000 || actualToNominal(aActual) > 500000) return Math.round(aActual / bActual);
+      if (bNom > 5000 || actualToNominal(aActual) > 500000) return { q: Math.round(aActual / bActual), rem: 0 };
       let rem = aActual; let q = 0;
       const bSub = nominalToActual(bNom);
       while (rem >= bSub) { rem = shomakuSubNominal(rem, bSub); q++; }
-      return q;
+      return { q, rem };
     }
   }
 }
@@ -531,8 +536,17 @@ function applyOp(aActual, bActual, o) {
 function compute() {
   if (prevActual === null || !op) return;
   const result = applyOp(prevActual, currentActual, op);
-  if (result === null) { currentNominalStr = 'エラー'; currentActual = 0; }
-  else { setCurrentFromActual(result); }
+  if (result === null) {
+    currentNominalStr = 'エラー'; currentActual = 0;
+  } else if (op === '÷' && typeof result === 'object') {
+    setCurrentFromActual(result.q);
+    if (result.rem > 0) {
+      const remNom = actualToNominal(result.rem);
+      currentNominalStr = String(actualToNominal(result.q)) + ' 余 ' + remNom;
+    }
+  } else {
+    setCurrentFromActual(result);
+  }
   prevActual = null; op = null; justComputed = true; waitingForOperand = false;
   updateDisplay();
 }
