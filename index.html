@@ -355,7 +355,7 @@
     <p>中世日本の貨幣慣行。97文を緡に括って100文、49文を括って50文として流通させた。</p>
     <div class="example">
       <div class="row"><span class="label">56＋43</span><span class="val">102</span></div>
-      <div class="row"><span class="label">150−80</span><span class="val">67</span></div>
+      <div class="row"><span class="label">150−80</span><span class="val">66</span></div>
       <div class="row"><span class="label">150−100</span><span class="val">50</span></div>
       <div class="row"><span class="label">150−101</span><span class="val">48</span></div>
       <div class="row"><span class="label">3×100</span><span class="val">291</span></div>
@@ -370,15 +370,31 @@
 //   五十文緡：50名目 = 49実際（下2桁がちょうど50の場合のみ）
 //
 // 加算：実際文で合計し名目に変換
-// 減算：aを崩す（百文緡優先、次に五十文緡）。bは名目のまま引く。
-// 乗算：繰り返し加算
-// 除算：繰り返し減算
-// ============================================================
+// 減算：五十文緡を先に崩し、次に百文緡を崩す
+function shomakuSub(a, b) {
+  let aH = Math.floor(a / 100);
+  let aL = a % 100;
+  const bH = Math.floor(b / 100);
+  const bL = b % 100;
 
-function actualToNominal(a) {
-  if (a < 0) return -actualToNominal(-a);
-  const h = Math.floor(a / 97); const r = a % 97;
-  return h * 100 + (r === 49 ? 50 : r);
+  // Step1: aLに五十文緡があれば先に崩す
+  if (aL === 50) aL = 49;
+
+  // Step2: 下2桁を引けるか確認
+  if (aL >= bL) {
+    return (aH - bH) * 100 + (aL - bL);
+  }
+
+  // Step3: 足りない → 百文緡を崩す
+  const deficit = (bH + 1) - aH;
+  if (deficit > 0) { aH += deficit; aL += deficit * 97; }
+  aH -= 1;
+  aL += 97;
+
+  // 崩した結果aLが50になれば五十文緡なので崩す
+  if (aL === 50) aL = 49;
+
+  return (aH - bH) * 100 + (aL - bL);
 }
 function nominalToActual(n) {
   if (n < 0) return -nominalToActual(-n);
@@ -391,37 +407,6 @@ function shomakuAdd(a, b) {
   return actualToNominal(nominalToActual(a) + nominalToActual(b));
 }
 
-// 減算：aを崩す（百文緡優先、次に五十文緡）。bは名目のまま引く。
-function shomakuSub(a, b) {
-  let aH = Math.floor(a / 100);
-  let aL = a % 100;
-  const bH = Math.floor(b / 100);
-  const bL = b % 100;
-
-  // Step1: 下2桁をそのまま引けるか確認
-  if (aL >= bL) {
-    // 引ける。ただしaL=50（五十文緡）でbL>0なら崩してから引く
-    if (aL === 50 && bL > 0) aL = 49;
-    return (aH - bH) * 100 + (aL - bL);
-  }
-
-  // Step2: 足りない → 百文緡を1つ崩す（aH > bH になるよう上位から借りてから崩す）
-  const deficit = (bH + 1) - aH;
-  if (deficit > 0) { aH += deficit; aL += deficit * 97; }
-  aH -= 1;
-  aL += 97;
-
-  // 崩した後で引けるか
-  if (aL >= bL) {
-    if (aL === 50 && bL > 0) aL = 49;
-    return (aH - bH) * 100 + (aL - bL);
-  }
-
-  // Step3: まだ足りない → 五十文緡を崩す（aL内に50が含まれていれば）
-  if (aL >= 50) aL -= 1;
-
-  return (aH - bH) * 100 + (aL - bL);
-}
 
 // 乗算：繰り返し加算
 function shomakuMul(a, b) {
