@@ -471,19 +471,17 @@ function inputDigit(d) {
 
 function input10() {
   if (justComputed) { current = '10'; justComputed = false; }
-  else {
-    const n = parseInt(current) || 0;
-    current = String(n + 10);
-  }
+  else if (current === '0') { current = '10'; }
+  else { current = current + '0'; }
+  if (current.length > 10) current = current.slice(0, 10);
   updateDisplay();
 }
 
 function input100() {
   if (justComputed) { current = '100'; justComputed = false; }
-  else {
-    const n = parseInt(current) || 0;
-    current = String(n + 100);
-  }
+  else if (current === '0') { current = '100'; }
+  else { current = current + '00'; }
+  if (current.length > 10) current = current.slice(0, 10);
   updateDisplay();
 }
 
