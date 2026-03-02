@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>省陌法電卓</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Shippori+Mincho:wght@400;700&display=swap');
+
+  :root {
+    --ink: #1a0f00;
+    --paper: #f5edd8;
+    --aged: #e8d5a3;
+    --gold: #8b6914;
+    --red: #8b1a1a;
+    --shadow: rgba(26,15,0,0.2);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Noto Serif JP', serif;
+    background-image: 
+      radial-gradient(ellipse at 20% 80%, #2d1a00 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, #1a0a00 0%, transparent 50%);
+  }
+
+  .wrapper {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .calc {
+    background: var(--paper);
+    border-radius: 4px;
+    padding: 28px 24px 24px;
+    width: 340px;
+    box-shadow: 
+      0 0 0 1px var(--gold),
+      0 0 0 3px var(--ink),
+      8px 12px 40px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.4);
+    position: relative;
+    background-image: 
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 28px,
+        rgba(139,105,20,0.08) 28px,
+        rgba(139,105,20,0.08) 29px
+      );
+  }
+
+  .calc::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .title-area {
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--gold);
+    padding-bottom: 16px;
+  }
+
+  .title-ja {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.2em;
+  }
+
+  .title-sub {
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    margin-top: 4px;
+  }
+
+  .display-area {
+    background: #1c1005;
+    border-radius: 3px;
+    padding: 16px 18px 12px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1);
+    border: 1px solid #0a0800;
+  }
+
+  .display-label {
+    font-size: 9px;
+    color: rgba(200,170,80,0.5);
+    letter-spacing: 0.2em;
+    margin-bottom: 4px;
+  }
+
+  .display-main {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 38px;
+    color: #f0d060;
+    text-align: right;
+    letter-spacing: 0.05em;
+    min-height: 48px;
+    text-shadow: 0 0 20px rgba(240,200,60,0.3);
+    transition: all 0.1s;
+    word-break: break-all;
+  }
+
+  .display-sub {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(200,150,50,0.15);
+  }
+
+  .display-op {
+    font-size: 11px;
+    color: rgba(200,150,50,0.6);
+    letter-spacing: 0.1em;
+    min-height: 16px;
+  }
+
+  .display-actual {
+    font-size: 10px;
+    color: rgba(200,150,50,0.45);
+    text-align: right;
+  }
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .key {
+    position: relative;
+    background: var(--aged);
+    border: none;
+    border-radius: 3px;
+    padding: 0;
+    height: 52px;
+    cursor: pointer;
+    font-family: 'Shippori Mincho', serif;
+    font-size: 18px;
+    color: var(--ink);
+    box-shadow: 
+      0 3px 0 #c4a96a,
+      0 4px 0 #9b7d3a,
+      0 5px 8px rgba(0,0,0,0.2);
+    transition: all 0.08s;
+    overflow: hidden;
+  }
+
+  .key::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .key:hover {
+    background: #ede0b5;
+    transform: translateY(-1px);
+    box-shadow: 
+      0 4px 0 #c4a96a,
+      0 5px 0 #9b7d3a,
+      0 6px 10px rgba(0,0,0,0.2);
+  }
+
+  .key:active {
+    transform: translateY(3px);
+    box-shadow: 
+      0 0 0 #c4a96a,
+      0 1px 0 #9b7d3a,
+      0 2px 4px rgba(0,0,0,0.2);
+  }
+
+  .key.op {
+    background: #c8a04a;
+    color: var(--paper);
+    font-size: 22px;
+    box-shadow: 
+      0 3px 0 #9b7030,
+      0 4px 0 #704a10,
+      0 5px 8px rgba(0,0,0,0.25);
+  }
+
+  .key.op:hover { background: #d4aa55; }
+  .key.op::after { background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 60%); }
+
+  .key.fn {
+    background: #5a3a1a;
+    color: var(--aged);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    box-shadow: 
+      0 3px 0 #3a2010,
+      0 4px 0 #1a0e05,
+      0 5px 8px rgba(0,0,0,0.3);
+  }
+
+  .key.fn:hover { background: #6a4a2a; }
+
+  .key.eq {
+    background: var(--red);
+    color: var(--aged);
+    font-size: 22px;
+    box-shadow: 
+      0 3px 0 #5a0808,
+      0 4px 0 #3a0505,
+      0 5px 8px rgba(0,0,0,0.3);
+  }
+
+  .key.eq:hover { background: #9b2020; }
+
+  .key.wide {
+    grid-column: span 2;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+  }
+
+  .key.zero { font-size: 18px; }
+
+  .ornament {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.4em;
+    opacity: 0.6;
+  }
+
+  /* Info panel */
+  .info {
+    width: 220px;
+    color: var(--aged);
+    font-size: 12px;
+    line-height: 1.9;
+  }
+
+  .info h2 {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(139,105,20,0.3);
+    padding-bottom: 8px;
+  }
+
+  .info p {
+    color: rgba(232,213,163,0.7);
+    margin-bottom: 10px;
+  }
+
+  .info .example {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(139,105,20,0.2);
+    border-radius: 3px;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 11px;
+  }
+
+  .info .example .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .info .example .row:last-child { border: none; }
+  .info .example .label { color: rgba(232,213,163,0.5); }
+  .info .example .val { color: #f0d060; font-family: 'Shippori Mincho', serif; }
+
+  .flash {
+    animation: flash 0.15s ease-out;
+  }
+
+  @keyframes flash {
+    0% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+
+  @media (max-width: 600px) {
+    .wrapper { flex-direction: column; align-items: center; }
+    .info { width: 340px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="calc">
+    <div class="title-area">
+      <div class="title-ja">省陌法　電卓</div>
+      <div class="title-sub">SHŌMAKU-HŌ CALCULATOR</div>
+    </div>
+
+    <div class="display-area">
+      <div class="display-label">文（MON）</div>
+      <div class="display-main" id="disp">0</div>
+      <div class="display-sub">
+        <div class="display-op" id="dispOp"></div>
+        <div class="display-actual" id="dispActual"></div>
+      </div>
+    </div>
+
+    <div class="keys">
+      <!-- Row 1 -->
+      <button class="key fn" onclick="clearAll()">AC</button>
+      <button class="key fn" onclick="clearEntry()">C</button>
+      <button class="key fn" onclick="toggleSign()">±</button>
+      <button class="key op" onclick="inputOp('÷')">÷</button>
+      <!-- Row 2 -->
+      <button class="key" onclick="inputDigit('7')">七</button>
+      <button class="key" onclick="inputDigit('8')">八</button>
+      <button class="key" onclick="inputDigit('9')">九</button>
+      <button class="key op" onclick="inputOp('×')">×</button>
+      <!-- Row 3 -->
+      <button class="key" onclick="inputDigit('4')">四</button>
+      <button class="key" onclick="inputDigit('5')">五</button>
+      <button class="key" onclick="inputDigit('6')">六</button>
+      <button class="key op" onclick="inputOp('−')">−</button>
+      <!-- Row 4 -->
+      <button class="key" onclick="inputDigit('1')">一</button>
+      <button class="key" onclick="inputDigit('2')">二</button>
+      <button class="key" onclick="inputDigit('3')">三</button>
+      <button class="key op" onclick="inputOp('+')">＋</button>
+      <!-- Row 5 -->
+      <button class="key fn" onclick="input100()">百</button>
+      <button class="key fn" onclick="input10()">十</button>
+      <button class="key zero" onclick="inputDigit('0')">〇</button>
+      <button class="key eq" onclick="compute()">=</button>
+    </div>
+
+    <div class="ornament">✦ ✦ ✦</div>
+  </div>
+
+  <div class="info">
+    <h2>省陌法とは</h2>
+    <p>中世日本の貨幣慣行。97文を緡（さし）に括って100文として流通させた。</p>
+    <p>加算で繰り上がった際、100文は97文相当として計算する。減算で繰り下がった際は、100文を97文として借りる。</p>
+    <div class="example">
+      <div class="row"><span class="label">56＋43</span><span class="val">102</span></div>
+      <div class="row"><span class="label">150−80</span><span class="val">67</span></div>
+      <div class="row"><span class="label">3×100</span><span class="val">291</span></div>
+      <div class="row"><span class="label">291÷3</span><span class="val">97</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 省陌法変換
+// 名目文 → 実際文数（97文/緡）
+function nominalToActual(n) {
+  const strings = Math.floor(n / 100);
+  const rem = n % 100;
+  return strings * 97 + rem;
+}
+
+// 実際文数 → 名目文（切り上げ的に最近接）
+function actualToNominal(a) {
+  if (a < 0) return -actualToNominal(-a);
+  const strings = Math.floor(a / 97);
+  const rem = a % 97;
+  return strings * 100 + rem;
+}
+
+// 省陌法で加算: 名目値で計算
+function shomakuAdd(a, b) {
+  // a, b は名目文。加算後の名目値
+  // 実際の文数同士を足し、名目に変換
+  const actualA = nominalToActual(a);
+  const actualB = nominalToActual(b);
+  return actualToNominal(actualA + actualB);
+}
+
+// 省陌法で減算
+function shomakuSub(a, b) {
+  const actualA = nominalToActual(a);
+  const actualB = nominalToActual(b);
+  return actualToNominal(actualA - actualB);
+}
+
+// 省陌法で乗算: 実際文で計算し名目に変換
+function shomakuMul(a, b) {
+  // bは純粋な数（倍数）として扱うか、文数として扱うか？
+  // 文×文は実用上ないので、実際文×bの場合
+  // ここでは両方を実際文に変換して掛け算し名目に戻す
+  const actualA = nominalToActual(a);
+  const actualB = nominalToActual(b);
+  // 乗算は実際の文を使って掛け算
+  // ただし文×文は単位が合わないので、bを純粋な数として扱うと解釈
+  // 自然な解釈：名目a文 × n = 実際(a×97/100ごとに)... 
+  // 実用的に: actualA * b_actual / 97 のような解釈も可能だが
+  // ここでは「名目文の実際の価値×b倍→名目に戻す」とする
+  const result = actualA * actualB;
+  // actualAを1単位として actualB倍の意味でなく
+  // actualA * actualB文 相当を名目に
+  return actualToNominal(result);
+}
+
+// 省陌法で除算
+function shomakuDiv(a, b) {
+  const actualA = nominalToActual(a);
+  const actualB = nominalToActual(b);
+  if (actualB === 0) return null;
+  const result = actualA / actualB;
+  return actualToNominal(Math.round(result));
+}
+
+// State
+let current = '0';
+let prevVal = null;
+let op = null;
+let justComputed = false;
+
+function updateDisplay() {
+  const disp = document.getElementById('disp');
+  const dispOp = document.getElementById('dispOp');
+  const dispActual = document.getElementById('dispActual');
+  
+  disp.textContent = current;
+  disp.classList.remove('flash');
+  void disp.offsetWidth;
+  disp.classList.add('flash');
+
+  if (op && prevVal !== null) {
+    dispOp.textContent = `${prevVal} ${op}`;
+  } else {
+    dispOp.textContent = '';
+  }
+
+  const n = parseFloat(current);
+  if (!isNaN(n) && n !== 0) {
+    const actual = nominalToActual(Math.abs(Math.round(n)));
+    if (actual !== Math.abs(Math.round(n))) {
+      dispActual.textContent = `実際 ${actual} 文`;
+    } else {
+      dispActual.textContent = '';
+    }
+  } else {
+    dispActual.textContent = '';
+  }
+}
+
+function inputDigit(d) {
+  if (justComputed) {
+    current = d;
+    justComputed = false;
+  } else {
+    current = current === '0' ? d : current + d;
+  }
+  if (current.length > 10) current = current.slice(0, 10);
+  updateDisplay();
+}
+
+function input10() {
+  if (justComputed) { current = '10'; justComputed = false; }
+  else {
+    const n = parseInt(current) || 0;
+    current = String(n + 10);
+  }
+  updateDisplay();
+}
+
+function input100() {
+  if (justComputed) { current = '100'; justComputed = false; }
+  else {
+    const n = parseInt(current) || 0;
+    current = String(n + 100);
+  }
+  updateDisplay();
+}
+
+function inputOp(o) {
+  justComputed = false;
+  if (prevVal !== null && op) {
+    // chain calculation
+    current = String(applyOp(prevVal, parseFloat(current), op));
+  }
+  prevVal = parseFloat(current);
+  op = o;
+  current = '0';
+  updateDisplay();
+}
+
+function applyOp(a, b, o) {
+  switch(o) {
+    case '+': return shomakuAdd(a, b);
+    case '−': return shomakuSub(a, b);
+    case '×': return shomakuMul(a, b);
+    case '÷': {
+      const r = shomakuDiv(a, b);
+      return r === null ? 'エラー' : r;
+    }
+  }
+}
+
+function compute() {
+  if (prevVal === null || !op) return;
+  const b = parseFloat(current);
+  const result = applyOp(prevVal, b, op);
+  current = String(result);
+  prevVal = null;
+  op = null;
+  justComputed = true;
+  updateDisplay();
+}
+
+function clearAll() {
+  current = '0';
+  prevVal = null;
+  op = null;
+  justComputed = false;
+  updateDisplay();
+}
+
+function clearEntry() {
+  current = '0';
+  justComputed = false;
+  updateDisplay();
+}
+
+function toggleSign() {
+  const n = parseFloat(current);
+  if (!isNaN(n)) current = String(-n);
+  updateDisplay();
+}
+
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') inputDigit(e.key);
+  else if (e.key === '+') inputOp('+');
+  else if (e.key === '-') inputOp('−');
+  else if (e.key === '*') inputOp('×');
+  else if (e.key === '/') { e.preventDefault(); inputOp('÷'); }
+  else if (e.key === 'Enter' || e.key === '=') compute();
+  else if (e.key === 'Escape') clearAll();
+  else if (e.key === 'Backspace') {
+    if (current.length > 1) current = current.slice(0, -1);
+    else current = '0';
+    updateDisplay();
+  }
+});
+
+updateDisplay();
+</script>
+</body>
+</html>
