@@ -396,6 +396,11 @@ function shomakuSub(a, b) {
 
   return (aH - bH) * 100 + (aL - bL);
 }
+function actualToNominal(a) {
+  if (a < 0) return -actualToNominal(-a);
+  const h = Math.floor(a / 97); const r = a % 97;
+  return h * 100 + (r === 49 ? 50 : r);
+}
 function nominalToActual(n) {
   if (n < 0) return -nominalToActual(-n);
   const h = Math.floor(n / 100); const r = n % 100;
