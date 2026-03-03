@@ -877,14 +877,17 @@ function convertSeirekiToNengo() {
       const nen = seireki - mainM.startYear + 1;
       const nenStr = nen === 1 ? '元' : String(nen);
       let sub = `西暦${seireki}年 → ${mainM.name}${nenStr}年`;
-      // 同年の改元前元号を注記
-      const prevMs = modernCandidates.slice(1);
-      if (prevMs.length > 0) {
-        const prevStr = prevMs.map(e => {
-          const n = seireki - e.startYear + 1;
-          return `${e.name}${n}年`;
-        }).join('・');
-        sub += ` ／ 改元前：${prevStr}`;
+      // 同年のMODERN_ERAS内の改元前元号
+      const prevMsModern = modernCandidates.slice(1).map(e => {
+        const n = seireki - e.startYear + 1;
+        return `${e.name}${n}年`;
+      });
+      // 同年に終わる旧元号（ERAS側）も拾う — 例：1868年の慶応4年
+      const prevMsOld = ERAS.filter(e => e.end === seireki && seireki > e.start)
+        .map(e => `${e.name}${seireki - e.start + 1}年`);
+      const allPrev = [...prevMsModern, ...prevMsOld];
+      if (allPrev.length > 0) {
+        sub += ` ／ 改元前：${allPrev.join('・')}`;
       }
       showResult('result-seireki', `${mainM.name}${nenStr}年`, sub);
       return;
