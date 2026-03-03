@@ -3,583 +3,1044 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>省陌法電卓</title>
+<title>年号・西暦変換</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600;900&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Shippori+Mincho:wght@400;700&display=swap');
-
   :root {
-    --ink: #1a0f00;
-    --paper: #f5edd8;
-    --aged: #e8d5a3;
-    --gold: #8b6914;
-    --red: #8b1a1a;
-    --shadow: rgba(26,15,0,0.2);
+    --ink: #1a1108;
+    --paper: #f5f0e8;
+    --paper-dark: #ede5d0;
+    --vermillion: #c0392b;
+    --gold: #b8860b;
+    --gold-light: #d4a520;
+    --gray: #8a7f6e;
+    --light-gray: #d6cfc0;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: var(--ink);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Noto Serif JP', serif;
-    background-image: 
-      radial-gradient(ellipse at 20% 80%, #2d1a00 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, #1a0a00 0%, transparent 50%);
-  }
-
-  .wrapper {
-    display: flex;
-    gap: 32px;
-    align-items: flex-start;
-  }
-
-  .calc {
-    background: var(--paper);
-    border-radius: 4px;
-    padding: 28px 24px 24px;
-    width: 340px;
-    box-shadow: 
-      0 0 0 1px var(--gold),
-      0 0 0 3px var(--ink),
-      8px 12px 40px rgba(0,0,0,0.6),
-      inset 0 1px 0 rgba(255,255,255,0.4);
-    position: relative;
-    background-image: 
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 28px,
-        rgba(139,105,20,0.08) 28px,
-        rgba(139,105,20,0.08) 29px
-      );
-  }
-
-  .calc::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 4px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-  }
-
-  .title-area {
-    text-align: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--gold);
-    padding-bottom: 16px;
-  }
-
-  .title-ja {
-    font-family: 'Shippori Mincho', serif;
-    font-size: 22px;
-    font-weight: 700;
+    background-color: var(--paper);
     color: var(--ink);
-    letter-spacing: 0.2em;
+    font-family: 'Noto Serif JP', serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* 和紙テクスチャ風背景 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(180,160,120,0.04) 40px, rgba(180,160,120,0.04) 41px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(180,160,120,0.04) 40px, rgba(180,160,120,0.04) 41px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 装飾的な縦線 */
+  body::after {
+    content: '';
+    position: fixed;
+    left: 60px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--light-gray) 20%, var(--light-gray) 80%, transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 60px 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 60px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .title-jp {
+    font-size: clamp(2.2rem, 6vw, 3.2rem);
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    line-height: 1.2;
+    color: var(--ink);
+    position: relative;
+    display: inline-block;
+  }
+
+  .title-jp::after {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(to right, transparent, var(--vermillion), transparent);
+    margin-top: 12px;
+    animation: expandLine 1s ease 0.5s both;
+    transform-origin: center;
   }
 
   .title-sub {
-    font-size: 10px;
-    color: var(--gold);
-    letter-spacing: 0.3em;
-    margin-top: 4px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 300;
+    letter-spacing: 0.4em;
+    color: var(--gray);
+    margin-top: 10px;
+    text-transform: uppercase;
   }
 
-  .display-area {
-    background: #1c1005;
-    border-radius: 3px;
-    padding: 16px 18px 12px;
-    margin-bottom: 20px;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.1);
-    border: 1px solid #0a0800;
-  }
-
-  .display-label {
-    font-size: 9px;
-    color: rgba(200,170,80,0.5);
-    letter-spacing: 0.2em;
-    margin-bottom: 4px;
-  }
-
-  .display-main {
-    font-family: 'Shippori Mincho', serif;
-    font-size: 38px;
-    color: #f0d060;
-    text-align: right;
-    letter-spacing: 0.05em;
-    min-height: 48px;
-    text-shadow: 0 0 20px rgba(240,200,60,0.3);
-    transition: all 0.1s;
-    word-break: break-all;
-  }
-
-  .display-sub {
+  /* タブ */
+  .tabs {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(200,150,50,0.15);
+    gap: 0;
+    margin-bottom: 40px;
+    border-bottom: 2px solid var(--light-gray);
+    animation: fadeUp 0.6s ease 0.3s both;
   }
 
-  .display-op {
-    font-size: 11px;
-    color: rgba(200,150,50,0.6);
-    letter-spacing: 0.1em;
-    min-height: 16px;
-  }
-
-  .display-actual {
-    font-size: 10px;
-    color: rgba(200,150,50,0.45);
-    text-align: right;
-  }
-
-  .keys {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-
-  .key {
-    position: relative;
-    background: var(--aged);
+  .tab-btn {
+    flex: 1;
+    padding: 14px 20px;
+    background: none;
     border: none;
-    border-radius: 3px;
-    padding: 0;
-    height: 52px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    color: var(--gray);
     cursor: pointer;
-    font-family: 'Shippori Mincho', serif;
-    font-size: 18px;
+    position: relative;
+    transition: color 0.3s;
+  }
+
+  .tab-btn::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--vermillion);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+  }
+
+  .tab-btn.active {
     color: var(--ink);
-    box-shadow: 
-      0 3px 0 #c4a96a,
-      0 4px 0 #9b7d3a,
-      0 5px 8px rgba(0,0,0,0.2);
-    transition: all 0.08s;
+    font-weight: 600;
+  }
+
+  .tab-btn.active::after {
+    transform: scaleX(1);
+  }
+
+  /* パネル */
+  .panel {
+    display: none;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .panel.active {
+    display: block;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.5);
+    border: 1px solid var(--light-gray);
+    border-radius: 2px;
+    padding: 36px 40px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.04), inset 0 0 0 1px rgba(255,255,255,0.8);
+  }
+
+  .field-label {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.35em;
+    font-weight: 400;
+    color: var(--gray);
+    margin-bottom: 10px;
+    display: block;
+    text-transform: uppercase;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  select, input[type="number"] {
+    padding: 12px 16px;
+    background: var(--paper);
+    border: 1px solid var(--light-gray);
+    border-radius: 1px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%238a7f6e'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 38px;
+    cursor: pointer;
+    min-width: 150px;
+  }
+
+  select:focus, input[type="number"]:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(184,134,11,0.12);
+  }
+
+  input[type="number"] {
+    width: 100px;
+  }
+
+  .nen-suffix {
+    font-size: 1.1rem;
+    color: var(--gray);
+    font-weight: 300;
+  }
+
+  .convert-btn {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    margin-top: 28px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.4em;
+    cursor: pointer;
+    transition: background 0.25s, letter-spacing 0.25s;
+    position: relative;
     overflow: hidden;
   }
 
-  .key::after {
+  .convert-btn::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 60%);
-    pointer-events: none;
+    background: var(--vermillion);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s ease;
   }
 
-  .key:hover {
-    background: #ede0b5;
-    transform: translateY(-1px);
-    box-shadow: 
-      0 4px 0 #c4a96a,
-      0 5px 0 #9b7d3a,
-      0 6px 10px rgba(0,0,0,0.2);
+  .convert-btn:hover::before {
+    transform: scaleX(1);
   }
 
-  .key:active {
-    transform: translateY(3px);
-    box-shadow: 
-      0 0 0 #c4a96a,
-      0 1px 0 #9b7d3a,
-      0 2px 4px rgba(0,0,0,0.2);
+  .convert-btn span {
+    position: relative;
+    z-index: 1;
   }
 
-  .key.op {
-    background: #c8a04a;
-    color: var(--paper);
-    font-size: 22px;
-    box-shadow: 
-      0 3px 0 #9b7030,
-      0 4px 0 #704a10,
-      0 5px 8px rgba(0,0,0,0.25);
+  .convert-btn:hover {
+    letter-spacing: 0.5em;
   }
 
-  .key.op:hover { background: #d4aa55; }
-  .key.op::after { background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 60%); }
-
-  .key.fn {
-    background: #5a3a1a;
-    color: var(--aged);
-    font-size: 13px;
-    letter-spacing: 0.05em;
-    box-shadow: 
-      0 3px 0 #3a2010,
-      0 4px 0 #1a0e05,
-      0 5px 8px rgba(0,0,0,0.3);
+  /* 結果 */
+  .result-box {
+    text-align: center;
+    padding: 32px 20px;
+    border-top: 1px solid var(--light-gray);
+    margin-top: 24px;
+    display: none;
+    animation: fadeUp 0.4s ease both;
   }
 
-  .key.fn:hover { background: #6a4a2a; }
-
-  .key.eq {
-    background: var(--red);
-    color: var(--aged);
-    font-size: 22px;
-    box-shadow: 
-      0 3px 0 #5a0808,
-      0 4px 0 #3a0505,
-      0 5px 8px rgba(0,0,0,0.3);
+  .result-box.visible {
+    display: block;
   }
 
-  .key.eq:hover { background: #9b2020; }
+  .result-label {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+    color: var(--gray);
+    margin-bottom: 14px;
+  }
 
-  .key.wide {
-    grid-column: span 2;
-    font-size: 14px;
+  .result-main {
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1;
+    animation: pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  .result-sub {
+    font-size: 0.95rem;
+    color: var(--gray);
+    margin-top: 10px;
+    font-weight: 300;
     letter-spacing: 0.1em;
   }
 
-  .key.zero { font-size: 18px; }
-
-  .ornament {
-    text-align: center;
+  /* エラー・注記 */
+  .notice {
+    background: #fff8f7;
+    border-left: 3px solid var(--vermillion);
+    padding: 14px 18px;
     margin-top: 18px;
-    font-size: 11px;
-    color: var(--gold);
-    letter-spacing: 0.4em;
-    opacity: 0.6;
+    font-size: 0.88rem;
+    color: #7a2020;
+    letter-spacing: 0.05em;
+    line-height: 1.8;
+    display: none;
+    animation: fadeUp 0.3s ease both;
   }
 
-  /* Info panel */
-  .info {
-    width: 220px;
-    color: var(--aged);
-    font-size: 12px;
-    line-height: 1.9;
+  .notice.visible {
+    display: block;
   }
 
-  .info h2 {
-    font-family: 'Shippori Mincho', serif;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--gold);
+  /* 一覧 */
+  .era-list-toggle {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .era-list-toggle button {
+    background: none;
+    border: 1px solid var(--light-gray);
+    padding: 8px 24px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.85rem;
     letter-spacing: 0.2em;
-    margin-bottom: 12px;
-    border-bottom: 1px solid rgba(139,105,20,0.3);
-    padding-bottom: 8px;
+    color: var(--gray);
+    cursor: pointer;
+    transition: all 0.2s;
   }
 
-  .info p {
-    color: rgba(232,213,163,0.7);
-    margin-bottom: 10px;
+  .era-list-toggle button:hover {
+    border-color: var(--gold);
+    color: var(--ink);
   }
 
-  .info .example {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(139,105,20,0.2);
-    border-radius: 3px;
-    padding: 10px;
-    margin-top: 10px;
-    font-size: 11px;
+  .era-table-wrapper {
+    display: none;
+    overflow-x: auto;
   }
 
-  .info .example .row {
-    display: flex;
-    justify-content: space-between;
-    padding: 2px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+  .era-table-wrapper.visible {
+    display: block;
+    animation: fadeUp 0.4s ease both;
   }
 
-  .info .example .row:last-child { border: none; }
-  .info .example .label { color: rgba(232,213,163,0.5); }
-  .info .example .val { color: #f0d060; font-family: 'Shippori Mincho', serif; }
-
-  .flash {
-    animation: flash 0.15s ease-out;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
   }
 
-  @keyframes flash {
-    0% { opacity: 0.4; }
-    100% { opacity: 1; }
+  th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    font-size: 0.78rem;
   }
 
-  @media (max-width: 600px) {
-    .wrapper { flex-direction: column; align-items: center; }
-    .info { width: 340px; }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--light-gray);
+    color: var(--ink);
+  }
+
+  tr:nth-child(even) td {
+    background: rgba(255,255,255,0.4);
+  }
+
+  tr:hover td {
+    background: rgba(184,134,11,0.06);
+  }
+
+  .era-period {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 300;
+    color: var(--gray);
+    font-size: 0.8rem;
+  }
+
+  /* 装飾 */
+  .decorative-line {
+    text-align: center;
+    color: var(--light-gray);
+    letter-spacing: 0.5em;
+    font-size: 0.7rem;
+    margin: 40px 0;
+  }
+
+  /* アニメーション */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes expandLine {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  @keyframes pop {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  footer {
+    text-align: center;
+    padding: 40px 20px 20px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.72rem;
+    color: var(--light-gray);
+    letter-spacing: 0.2em;
   }
 </style>
 </head>
 <body>
-<div class="wrapper">
-  <div class="calc">
-    <div class="title-area">
-      <div class="title-ja">省陌法　電卓</div>
-      <div class="title-sub">SHŌMAKU-HŌ CALCULATOR</div>
-    </div>
+<div class="container">
+  <header>
+    <div class="title-jp">年号変換</div>
+    <div class="title-sub">Japanese Era Converter</div>
+  </header>
 
-    <div class="display-area">
-      <div class="display-label">文（MON）</div>
-      <div class="display-main" id="disp">0</div>
-      <div class="display-sub">
-        <div class="display-op" id="dispOp"></div>
-        <div class="display-actual" id="dispActual"></div>
-      </div>
-    </div>
-
-    <div class="keys">
-      <!-- Row 1 -->
-      <button class="key fn" onclick="clearAll()">AC</button>
-      <button class="key fn" onclick="clearEntry()">C</button>
-      <button class="key fn" onclick="toggleSign()">±</button>
-      <button class="key op" onclick="inputOp('÷')">÷</button>
-      <!-- Row 2 -->
-      <button class="key" onclick="inputDigit('7')">七</button>
-      <button class="key" onclick="inputDigit('8')">八</button>
-      <button class="key" onclick="inputDigit('9')">九</button>
-      <button class="key op" onclick="inputOp('×')">×</button>
-      <!-- Row 3 -->
-      <button class="key" onclick="inputDigit('4')">四</button>
-      <button class="key" onclick="inputDigit('5')">五</button>
-      <button class="key" onclick="inputDigit('6')">六</button>
-      <button class="key op" onclick="inputOp('−')">−</button>
-      <!-- Row 4 -->
-      <button class="key" onclick="inputDigit('1')">一</button>
-      <button class="key" onclick="inputDigit('2')">二</button>
-      <button class="key" onclick="inputDigit('3')">三</button>
-      <button class="key op" onclick="inputOp('+')">＋</button>
-      <!-- Row 5 -->
-      <button class="key fn" onclick="input100()">百</button>
-      <button class="key fn" onclick="input10()">十</button>
-      <button class="key zero" onclick="inputDigit('0')">〇</button>
-      <button class="key eq" onclick="compute()">=</button>
-    </div>
-
-    <div class="ornament">✦ ✦ ✦</div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('nengo')">年号 → 西暦</button>
+    <button class="tab-btn" onclick="switchTab('seireki')">西暦 → 年号</button>
   </div>
 
-  <div class="info">
-    <h2>省陌法とは</h2>
-    <p>中世日本の貨幣慣行。97文を緡に括って100文、49文を括って50文として流通させた。</p>
-    <p style="color:rgba(232,213,163,0.5);font-size:10px;margin-bottom:10px;">参考文献：伊藤俊一「省陌法をめぐって」（同『室町期荘園制の研究』Ⅱ部7章、塙書房、2010年）</p>
-    <div class="example">
-      <div class="row"><span class="label">56＋43</span><span class="val">102</span></div>
-      <div class="row"><span class="label">150−80</span><span class="val">66</span></div>
-      <div class="row"><span class="label">150−100</span><span class="val">50</span></div>
-      <div class="row"><span class="label">150−101</span><span class="val">48</span></div>
-      <div class="row"><span class="label">3×100</span><span class="val">291</span></div>
+  <!-- 年号→西暦 -->
+  <div id="panel-nengo" class="panel active">
+    <div class="card">
+      <label class="field-label">年号と年を入力</label>
+      <div class="input-row">
+        <select id="era-select">
+          <option value="">年号を選択</option>
+        </select>
+        <input type="number" id="era-year" min="1" placeholder="年" />
+        <span class="nen-suffix">年</span>
+      </div>
+      <div id="notice-nengo" class="notice"></div>
+      <button class="convert-btn" onclick="convertNengoToSeireki()"><span>変　換</span></button>
+    </div>
+    <div id="result-nengo" class="result-box">
+      <div class="result-label">RESULT — 西暦</div>
+      <div class="result-main" id="result-nengo-val"></div>
+      <div class="result-sub" id="result-nengo-sub"></div>
+    </div>
+  </div>
+
+  <!-- 西暦→年号 -->
+  <div id="panel-seireki" class="panel">
+    <div class="card">
+      <label class="field-label">西暦年を入力</label>
+      <div class="input-row">
+        <input type="number" id="seireki-year" min="1" placeholder="例：1868" style="width:160px" />
+        <span class="nen-suffix">年</span>
+      </div>
+      <div id="notice-seireki" class="notice"></div>
+      <button class="convert-btn" onclick="convertSeirekiToNengo()"><span>変　換</span></button>
+    </div>
+    <div id="result-seireki" class="result-box">
+      <div class="result-label">RESULT — 年号</div>
+      <div class="result-main" id="result-seireki-val"></div>
+      <div class="result-sub" id="result-seireki-sub"></div>
+    </div>
+  </div>
+
+  <div class="decorative-line">— ✦ —</div>
+
+  <div class="era-list-toggle">
+    <button onclick="toggleEraList()">年号一覧を表示</button>
+  </div>
+  <div id="era-table-wrapper" class="era-table-wrapper">
+    <div class="card" style="padding:0;overflow:hidden">
+      <table id="era-table">
+        <thead><tr><th>年号</th><th>読み</th><th>開始年</th><th>終了年</th><th>備考</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 </div>
 
+<footer>古代〜現代の日本年号に対応 | 旧暦・改元日は考慮していません</footer>
+
 <script>
-// ============================================================
-// 省陌法　計算ロジック
-//
-// 内部状態：{h: 百文緡数, l: 実際端数文}
-// 入力(名目) → nomToVal → 内部状態
-// 内部状態 → valToDisplay → 表示名目
-//
-//   百文緡：100名目 = 97実際
-//   五十文緡：端数が百文緡化後に49文以上残った時、50名目として表示
-// ============================================================
+// 元号データ — period フィールドで時代区分
+const ERAS = [
+  // 奈良時代（大化〜天応）
+  { name: "大化",     yomi: "たいか",           start: 645,  end: 650,  period: "奈良" },
+  { name: "白雉",     yomi: "はくち",           start: 650,  end: 654,  period: "奈良" },
+  { name: "朱鳥",     yomi: "しゅちょう",       start: 686,  end: 686,  period: "奈良" },
+  { name: "大宝",     yomi: "たいほう",         start: 701,  end: 704,  period: "奈良" },
+  { name: "慶雲",     yomi: "けいうん",         start: 704,  end: 708,  period: "奈良" },
+  { name: "和銅",     yomi: "わどう",           start: 708,  end: 715,  period: "奈良" },
+  { name: "霊亀",     yomi: "れいき",           start: 715,  end: 717,  period: "奈良" },
+  { name: "養老",     yomi: "ようろう",         start: 717,  end: 724,  period: "奈良" },
+  { name: "神亀",     yomi: "じんき",           start: 724,  end: 729,  period: "奈良" },
+  { name: "天平",     yomi: "てんぴょう",       start: 729,  end: 749,  period: "奈良" },
+  { name: "天平感宝", yomi: "てんぴょうかんぽう",start: 749,  end: 749,  period: "奈良" },
+  { name: "天平勝宝", yomi: "てんぴょうしょうほう",start:749, end: 757,  period: "奈良" },
+  { name: "天平宝字", yomi: "てんぴょうほうじ", start: 757,  end: 765,  period: "奈良" },
+  { name: "天平神護", yomi: "てんぴょうじんご", start: 765,  end: 767,  period: "奈良" },
+  { name: "神護景雲", yomi: "じんごけいうん",   start: 767,  end: 770,  period: "奈良" },
+  { name: "宝亀",     yomi: "ほうき",           start: 770,  end: 781,  period: "奈良" },
+  { name: "天応",     yomi: "てんおう",         start: 781,  end: 782,  period: "奈良" },
+  // 平安時代（延暦〜元暦）
+  { name: "延暦",     yomi: "えんりゃく",       start: 782,  end: 806,  period: "平安" },
+  { name: "大同",     yomi: "だいどう",         start: 806,  end: 810,  period: "平安" },
+  { name: "弘仁",     yomi: "こうにん",         start: 810,  end: 824,  period: "平安" },
+  { name: "天長",     yomi: "てんちょう",       start: 824,  end: 834,  period: "平安" },
+  { name: "承和",     yomi: "じょうわ",         start: 834,  end: 848,  period: "平安" },
+  { name: "嘉祥",     yomi: "かしょう",         start: 848,  end: 851,  period: "平安" },
+  { name: "仁寿",     yomi: "にんじゅ",         start: 851,  end: 854,  period: "平安" },
+  { name: "斉衡",     yomi: "さいこう",         start: 854,  end: 857,  period: "平安" },
+  { name: "天安",     yomi: "てんあん",         start: 857,  end: 859,  period: "平安" },
+  { name: "貞観",     yomi: "じょうがん",       start: 859,  end: 877,  period: "平安" },
+  { name: "元慶",     yomi: "がんぎょう",       start: 877,  end: 885,  period: "平安" },
+  { name: "仁和",     yomi: "にんな",           start: 885,  end: 889,  period: "平安" },
+  { name: "寛平",     yomi: "かんぴょう",       start: 889,  end: 898,  period: "平安" },
+  { name: "昌泰",     yomi: "しょうたい",       start: 898,  end: 901,  period: "平安" },
+  { name: "延喜",     yomi: "えんぎ",           start: 901,  end: 923,  period: "平安" },
+  { name: "延長",     yomi: "えんちょう",       start: 923,  end: 931,  period: "平安" },
+  { name: "承平",     yomi: "じょうへい",       start: 931,  end: 938,  period: "平安" },
+  { name: "天慶",     yomi: "てんぎょう",       start: 938,  end: 947,  period: "平安" },
+  { name: "天暦",     yomi: "てんりゃく",       start: 947,  end: 957,  period: "平安" },
+  { name: "天徳",     yomi: "てんとく",         start: 957,  end: 961,  period: "平安" },
+  { name: "応和",     yomi: "おうわ",           start: 961,  end: 964,  period: "平安" },
+  { name: "康保",     yomi: "こうほう",         start: 964,  end: 968,  period: "平安" },
+  { name: "安和",     yomi: "あんな",           start: 968,  end: 970,  period: "平安" },
+  { name: "天禄",     yomi: "てんろく",         start: 970,  end: 973,  period: "平安" },
+  { name: "天延",     yomi: "てんえん",         start: 973,  end: 976,  period: "平安" },
+  { name: "貞元",     yomi: "じょうげん",       start: 976,  end: 978,  period: "平安" },
+  { name: "天元",     yomi: "てんげん",         start: 978,  end: 983,  period: "平安" },
+  { name: "永観",     yomi: "えいかん",         start: 983,  end: 985,  period: "平安" },
+  { name: "寛和",     yomi: "かんな",           start: 985,  end: 987,  period: "平安" },
+  { name: "永延",     yomi: "えいえん",         start: 987,  end: 989,  period: "平安" },
+  { name: "永祚",     yomi: "えいそ",           start: 989,  end: 990,  period: "平安" },
+  { name: "正暦",     yomi: "しょうりゃく",     start: 990,  end: 995,  period: "平安" },
+  { name: "長徳",     yomi: "ちょうとく",       start: 995,  end: 999,  period: "平安" },
+  { name: "長保",     yomi: "ちょうほう",       start: 999,  end: 1004, period: "平安" },
+  { name: "寛弘",     yomi: "かんこう",         start: 1004, end: 1012, period: "平安" },
+  { name: "長和",     yomi: "ちょうわ",         start: 1012, end: 1017, period: "平安" },
+  { name: "寛仁",     yomi: "かんにん",         start: 1017, end: 1021, period: "平安" },
+  { name: "治安",     yomi: "じあん",           start: 1021, end: 1024, period: "平安" },
+  { name: "万寿",     yomi: "まんじゅ",         start: 1024, end: 1028, period: "平安" },
+  { name: "長元",     yomi: "ちょうげん",       start: 1028, end: 1037, period: "平安" },
+  { name: "長暦",     yomi: "ちょうりゃく",     start: 1037, end: 1040, period: "平安" },
+  { name: "長久",     yomi: "ちょうきゅう",     start: 1040, end: 1044, period: "平安" },
+  { name: "寛徳",     yomi: "かんとく",         start: 1044, end: 1046, period: "平安" },
+  { name: "永承",     yomi: "えいしょう",       start: 1046, end: 1053, period: "平安" },
+  { name: "天喜",     yomi: "てんき",           start: 1053, end: 1058, period: "平安" },
+  { name: "康平",     yomi: "こうへい",         start: 1058, end: 1065, period: "平安" },
+  { name: "治暦",     yomi: "じりゃく",         start: 1065, end: 1069, period: "平安" },
+  { name: "延久",     yomi: "えんきゅう",       start: 1069, end: 1074, period: "平安" },
+  { name: "承保",     yomi: "じょうほう",       start: 1074, end: 1077, period: "平安" },
+  { name: "承暦",     yomi: "じょうりゃく",     start: 1077, end: 1081, period: "平安" },
+  { name: "永保",     yomi: "えいほう",         start: 1081, end: 1084, period: "平安" },
+  { name: "応徳",     yomi: "おうとく",         start: 1084, end: 1087, period: "平安" },
+  { name: "寛治",     yomi: "かんじ",           start: 1087, end: 1094, period: "平安" },
+  { name: "嘉保",     yomi: "かほう",           start: 1094, end: 1096, period: "平安" },
+  { name: "永長",     yomi: "えいちょう",       start: 1096, end: 1097, period: "平安" },
+  { name: "承徳",     yomi: "じょうとく",       start: 1097, end: 1099, period: "平安" },
+  { name: "康和",     yomi: "こうわ",           start: 1099, end: 1104, period: "平安" },
+  { name: "長治",     yomi: "ちょうじ",         start: 1104, end: 1106, period: "平安" },
+  { name: "嘉承",     yomi: "かじょう",         start: 1106, end: 1108, period: "平安" },
+  { name: "天仁",     yomi: "てんにん",         start: 1108, end: 1110, period: "平安" },
+  { name: "天永",     yomi: "てんえい",         start: 1110, end: 1113, period: "平安" },
+  { name: "永久",     yomi: "えいきゅう",       start: 1113, end: 1118, period: "平安" },
+  { name: "元永",     yomi: "げんえい",         start: 1118, end: 1120, period: "平安" },
+  { name: "保安",     yomi: "ほうあん",         start: 1120, end: 1124, period: "平安" },
+  { name: "天治",     yomi: "てんじ",           start: 1124, end: 1126, period: "平安" },
+  { name: "大治",     yomi: "だいじ",           start: 1126, end: 1131, period: "平安" },
+  { name: "天承",     yomi: "てんしょう",       start: 1131, end: 1132, period: "平安" },
+  { name: "長承",     yomi: "ちょうしょう",     start: 1132, end: 1135, period: "平安" },
+  { name: "保延",     yomi: "ほうえん",         start: 1135, end: 1141, period: "平安" },
+  { name: "永治",     yomi: "えいじ",           start: 1141, end: 1142, period: "平安" },
+  { name: "康治",     yomi: "こうじ",           start: 1142, end: 1144, period: "平安" },
+  { name: "天養",     yomi: "てんよう",         start: 1144, end: 1145, period: "平安" },
+  { name: "久安",     yomi: "きゅうあん",       start: 1145, end: 1151, period: "平安" },
+  { name: "仁平",     yomi: "にんぺい",         start: 1151, end: 1154, period: "平安" },
+  { name: "久寿",     yomi: "きゅうじゅ",       start: 1154, end: 1156, period: "平安" },
+  { name: "保元",     yomi: "ほうげん",         start: 1156, end: 1159, period: "平安" },
+  { name: "平治",     yomi: "へいじ",           start: 1159, end: 1160, period: "平安" },
+  { name: "永暦",     yomi: "えいりゃく",       start: 1160, end: 1161, period: "平安" },
+  { name: "応保",     yomi: "おうほう",         start: 1161, end: 1163, period: "平安" },
+  { name: "長寛",     yomi: "ちょうかん",       start: 1163, end: 1165, period: "平安" },
+  { name: "永万",     yomi: "えいまん",         start: 1165, end: 1166, period: "平安" },
+  { name: "仁安",     yomi: "にんあん",         start: 1166, end: 1169, period: "平安" },
+  { name: "嘉応",     yomi: "かおう",           start: 1169, end: 1171, period: "平安" },
+  { name: "承安",     yomi: "しょうあん",       start: 1171, end: 1175, period: "平安" },
+  { name: "安元",     yomi: "あんげん",         start: 1175, end: 1177, period: "平安" },
+  { name: "治承",     yomi: "じしょう",         start: 1177, end: 1185, period: "平安" },
+  { name: "養和",     yomi: "ようわ",           start: 1181, end: 1182, period: "平安" },
+  { name: "寿永",     yomi: "じゅえい",         start: 1182, end: 1185, period: "平安" },
+  { name: "元暦",     yomi: "げんりゃく",       start: 1184, end: 1185, period: "平安" },
+  // 鎌倉時代（文治〜正慶）
+  { name: "文治",     yomi: "ぶんじ",           start: 1185, end: 1190, period: "鎌倉" },
+  { name: "建久",     yomi: "けんきゅう",       start: 1190, end: 1199, period: "鎌倉" },
+  { name: "正治",     yomi: "しょうじ",         start: 1199, end: 1201, period: "鎌倉" },
+  { name: "建仁",     yomi: "けんにん",         start: 1201, end: 1204, period: "鎌倉" },
+  { name: "元久",     yomi: "げんきゅう",       start: 1204, end: 1206, period: "鎌倉" },
+  { name: "建永",     yomi: "けんえい",         start: 1206, end: 1207, period: "鎌倉" },
+  { name: "承元",     yomi: "じょうげん",       start: 1207, end: 1211, period: "鎌倉" },
+  { name: "建暦",     yomi: "けんりゃく",       start: 1211, end: 1213, period: "鎌倉" },
+  { name: "建保",     yomi: "けんぽう",         start: 1213, end: 1219, period: "鎌倉" },
+  { name: "承久",     yomi: "じょうきゅう",     start: 1219, end: 1222, period: "鎌倉" },
+  { name: "貞応",     yomi: "じょうおう",       start: 1222, end: 1224, period: "鎌倉" },
+  { name: "元仁",     yomi: "げんにん",         start: 1224, end: 1225, period: "鎌倉" },
+  { name: "嘉禄",     yomi: "かろく",           start: 1225, end: 1227, period: "鎌倉" },
+  { name: "安貞",     yomi: "あんてい",         start: 1227, end: 1229, period: "鎌倉" },
+  { name: "寛喜",     yomi: "かんき",           start: 1229, end: 1232, period: "鎌倉" },
+  { name: "貞永",     yomi: "じょうえい",       start: 1232, end: 1233, period: "鎌倉" },
+  { name: "天福",     yomi: "てんぷく",         start: 1233, end: 1234, period: "鎌倉" },
+  { name: "文暦",     yomi: "ぶんりゃく",       start: 1234, end: 1235, period: "鎌倉" },
+  { name: "嘉禎",     yomi: "かてい",           start: 1235, end: 1238, period: "鎌倉" },
+  { name: "暦仁",     yomi: "りゃくにん",       start: 1238, end: 1239, period: "鎌倉" },
+  { name: "延応",     yomi: "えんおう",         start: 1239, end: 1240, period: "鎌倉" },
+  { name: "仁治",     yomi: "にんじ",           start: 1240, end: 1243, period: "鎌倉" },
+  { name: "寛元",     yomi: "かんげん",         start: 1243, end: 1247, period: "鎌倉" },
+  { name: "宝治",     yomi: "ほうじ",           start: 1247, end: 1249, period: "鎌倉" },
+  { name: "建長",     yomi: "けんちょう",       start: 1249, end: 1256, period: "鎌倉" },
+  { name: "康元",     yomi: "こうげん",         start: 1256, end: 1257, period: "鎌倉" },
+  { name: "正嘉",     yomi: "しょうか",         start: 1257, end: 1259, period: "鎌倉" },
+  { name: "正元",     yomi: "しょうげん",       start: 1259, end: 1260, period: "鎌倉" },
+  { name: "文応",     yomi: "ぶんおう",         start: 1260, end: 1261, period: "鎌倉" },
+  { name: "弘長",     yomi: "こうちょう",       start: 1261, end: 1264, period: "鎌倉" },
+  { name: "文永",     yomi: "ぶんえい",         start: 1264, end: 1275, period: "鎌倉" },
+  { name: "建治",     yomi: "けんじ",           start: 1275, end: 1278, period: "鎌倉" },
+  { name: "弘安",     yomi: "こうあん",         start: 1278, end: 1288, period: "鎌倉" },
+  { name: "正応",     yomi: "しょうおう",       start: 1288, end: 1293, period: "鎌倉" },
+  { name: "永仁",     yomi: "えいにん",         start: 1293, end: 1299, period: "鎌倉" },
+  { name: "正安",     yomi: "しょうあん",       start: 1299, end: 1302, period: "鎌倉" },
+  { name: "乾元",     yomi: "けんげん",         start: 1302, end: 1303, period: "鎌倉" },
+  { name: "嘉元",     yomi: "かげん",           start: 1303, end: 1306, period: "鎌倉" },
+  { name: "徳治",     yomi: "とくじ",           start: 1306, end: 1308, period: "鎌倉" },
+  { name: "延慶",     yomi: "えんきょう",       start: 1308, end: 1311, period: "鎌倉" },
+  { name: "応長",     yomi: "おうちょう",       start: 1311, end: 1312, period: "鎌倉" },
+  { name: "正和",     yomi: "しょうわ",         start: 1312, end: 1317, period: "鎌倉" },
+  { name: "文保",     yomi: "ぶんぽう",         start: 1317, end: 1319, period: "鎌倉" },
+  { name: "元応",     yomi: "げんおう",         start: 1319, end: 1321, period: "鎌倉" },
+  { name: "元亨",     yomi: "げんこう",         start: 1321, end: 1324, period: "鎌倉" },
+  { name: "正中",     yomi: "しょうちゅう",     start: 1324, end: 1326, period: "鎌倉" },
+  { name: "嘉暦",     yomi: "かりゃく",         start: 1326, end: 1329, period: "鎌倉" },
+  { name: "元徳",     yomi: "げんとく",         start: 1329, end: 1331, period: "鎌倉" },
+  { name: "元弘",     yomi: "げんこう",         start: 1331, end: 1334, period: "鎌倉" },
+  { name: "正慶",     yomi: "しょうきょう",     start: 1332, end: 1333, period: "鎌倉" },
+  // 南北朝時代（建武〜康応）
+  // 建武：南朝は3年（1336年）まで、北朝は5年（1338年）まで
+  { name: "建武",     yomi: "けんむ",           start: 1334, end: 1336, period: "南北朝（南朝）" },
+  { name: "建武",     yomi: "けんむ",           start: 1334, end: 1338, period: "南北朝（北朝）" },
+  // 南朝
+  { name: "延元",     yomi: "えんげん",         start: 1336, end: 1340, period: "南北朝（南朝）" },
+  { name: "興国",     yomi: "こうこく",         start: 1340, end: 1346, period: "南北朝（南朝）" },
+  { name: "正平",     yomi: "しょうへい",       start: 1346, end: 1370, period: "南北朝（南朝）" },
+  { name: "建徳",     yomi: "けんとく",         start: 1370, end: 1372, period: "南北朝（南朝）" },
+  { name: "文中",     yomi: "ぶんちゅう",       start: 1372, end: 1375, period: "南北朝（南朝）" },
+  { name: "天授",     yomi: "てんじゅ",         start: 1375, end: 1381, period: "南北朝（南朝）" },
+  { name: "弘和",     yomi: "こうわ",           start: 1381, end: 1384, period: "南北朝（南朝）" },
+  { name: "元中",     yomi: "げんちゅう",       start: 1384, end: 1392, period: "南北朝（南朝）" },
+  // 北朝
+  { name: "暦応",     yomi: "りゃくおう",       start: 1338, end: 1342, period: "南北朝（北朝）" },
+  { name: "康永",     yomi: "こうえい",         start: 1342, end: 1345, period: "南北朝（北朝）" },
+  { name: "貞和",     yomi: "じょうわ",         start: 1345, end: 1350, period: "南北朝（北朝）" },
+  { name: "観応",     yomi: "かんのう",         start: 1350, end: 1352, period: "南北朝（北朝）" },
+  { name: "文和",     yomi: "ぶんわ",           start: 1352, end: 1356, period: "南北朝（北朝）" },
+  { name: "延文",     yomi: "えんぶん",         start: 1356, end: 1361, period: "南北朝（北朝）" },
+  { name: "康安",     yomi: "こうあん",         start: 1361, end: 1362, period: "南北朝（北朝）" },
+  { name: "貞治",     yomi: "じょうじ",         start: 1362, end: 1368, period: "南北朝（北朝）" },
+  { name: "応安",     yomi: "おうあん",         start: 1368, end: 1375, period: "南北朝（北朝）" },
+  { name: "永和",     yomi: "えいわ",           start: 1375, end: 1379, period: "南北朝（北朝）" },
+  { name: "康暦",     yomi: "こうりゃく",       start: 1379, end: 1381, period: "南北朝（北朝）" },
+  { name: "永徳",     yomi: "えいとく",         start: 1381, end: 1384, period: "南北朝（北朝）" },
+  { name: "至徳",     yomi: "しとく",           start: 1384, end: 1387, period: "南北朝（北朝）" },
+  { name: "嘉慶",     yomi: "かきょう",         start: 1387, end: 1389, period: "南北朝（北朝）" },
+  { name: "康応",     yomi: "こうおう",         start: 1389, end: 1390, period: "南北朝（北朝）" },
+  // 室町時代（明徳〜天正）
+  { name: "明徳",     yomi: "めいとく",         start: 1390, end: 1394, period: "室町" },
+  { name: "応永",     yomi: "おうえい",         start: 1394, end: 1428, period: "室町" },
+  { name: "正長",     yomi: "しょうちょう",     start: 1428, end: 1429, period: "室町" },
+  { name: "永享",     yomi: "えいきょう",       start: 1429, end: 1441, period: "室町" },
+  { name: "嘉吉",     yomi: "かきつ",           start: 1441, end: 1444, period: "室町" },
+  { name: "文安",     yomi: "ぶんあん",         start: 1444, end: 1449, period: "室町" },
+  { name: "宝徳",     yomi: "ほうとく",         start: 1449, end: 1452, period: "室町" },
+  { name: "享徳",     yomi: "きょうとく",       start: 1452, end: 1455, period: "室町" },
+  { name: "康正",     yomi: "こうしょう",       start: 1455, end: 1457, period: "室町" },
+  { name: "長禄",     yomi: "ちょうろく",       start: 1457, end: 1461, period: "室町" },
+  { name: "寛正",     yomi: "かんしょう",       start: 1461, end: 1466, period: "室町" },
+  { name: "文正",     yomi: "ぶんしょう",       start: 1466, end: 1467, period: "室町" },
+  { name: "応仁",     yomi: "おうにん",         start: 1467, end: 1469, period: "室町" },
+  { name: "文明",     yomi: "ぶんめい",         start: 1469, end: 1487, period: "室町" },
+  { name: "長享",     yomi: "ちょうきょう",     start: 1487, end: 1489, period: "室町" },
+  { name: "延徳",     yomi: "えんとく",         start: 1489, end: 1492, period: "室町" },
+  { name: "明応",     yomi: "めいおう",         start: 1492, end: 1501, period: "室町" },
+  { name: "文亀",     yomi: "ぶんき",           start: 1501, end: 1504, period: "室町" },
+  { name: "永正",     yomi: "えいしょう",       start: 1504, end: 1521, period: "室町" },
+  { name: "大永",     yomi: "だいえい",         start: 1521, end: 1528, period: "室町" },
+  { name: "享禄",     yomi: "きょうろく",       start: 1528, end: 1532, period: "室町" },
+  { name: "天文",     yomi: "てんぶん",         start: 1532, end: 1555, period: "室町" },
+  { name: "弘治",     yomi: "こうじ",           start: 1555, end: 1558, period: "室町" },
+  { name: "永禄",     yomi: "えいろく",         start: 1558, end: 1570, period: "室町" },
+  { name: "元亀",     yomi: "げんき",           start: 1570, end: 1573, period: "室町" },
+  { name: "天正",     yomi: "てんしょう",       start: 1573, end: 1593, period: "室町" },
+  // 江戸時代（文禄〜慶応）
+  { name: "文禄",     yomi: "ぶんろく",         start: 1593, end: 1596, period: "江戸" },
+  { name: "慶長",     yomi: "けいちょう",       start: 1596, end: 1615, period: "江戸" },
+  { name: "元和",     yomi: "げんわ",           start: 1615, end: 1624, period: "江戸" },
+  { name: "寛永",     yomi: "かんえい",         start: 1624, end: 1645, period: "江戸" },
+  { name: "正保",     yomi: "しょうほう",       start: 1645, end: 1648, period: "江戸" },
+  { name: "慶安",     yomi: "けいあん",         start: 1648, end: 1652, period: "江戸" },
+  { name: "承応",     yomi: "じょうおう",       start: 1652, end: 1655, period: "江戸" },
+  { name: "明暦",     yomi: "めいれき",         start: 1655, end: 1658, period: "江戸" },
+  { name: "万治",     yomi: "まんじ",           start: 1658, end: 1661, period: "江戸" },
+  { name: "寛文",     yomi: "かんぶん",         start: 1661, end: 1673, period: "江戸" },
+  { name: "延宝",     yomi: "えんぽう",         start: 1673, end: 1681, period: "江戸" },
+  { name: "天和",     yomi: "てんな",           start: 1681, end: 1684, period: "江戸" },
+  { name: "貞享",     yomi: "じょうきょう",     start: 1684, end: 1688, period: "江戸" },
+  { name: "元禄",     yomi: "げんろく",         start: 1688, end: 1704, period: "江戸" },
+  { name: "宝永",     yomi: "ほうえい",         start: 1704, end: 1711, period: "江戸" },
+  { name: "正徳",     yomi: "しょうとく",       start: 1711, end: 1716, period: "江戸" },
+  { name: "享保",     yomi: "きょうほう",       start: 1716, end: 1736, period: "江戸" },
+  { name: "元文",     yomi: "げんぶん",         start: 1736, end: 1741, period: "江戸" },
+  { name: "寛保",     yomi: "かんぽう",         start: 1741, end: 1744, period: "江戸" },
+  { name: "延享",     yomi: "えんきょう",       start: 1744, end: 1748, period: "江戸" },
+  { name: "寛延",     yomi: "かんえん",         start: 1748, end: 1751, period: "江戸" },
+  { name: "宝暦",     yomi: "ほうれき",         start: 1751, end: 1764, period: "江戸" },
+  { name: "明和",     yomi: "めいわ",           start: 1764, end: 1772, period: "江戸" },
+  { name: "安永",     yomi: "あんえい",         start: 1772, end: 1781, period: "江戸" },
+  { name: "天明",     yomi: "てんめい",         start: 1781, end: 1789, period: "江戸" },
+  { name: "寛政",     yomi: "かんせい",         start: 1789, end: 1801, period: "江戸" },
+  { name: "享和",     yomi: "きょうわ",         start: 1801, end: 1804, period: "江戸" },
+  { name: "文化",     yomi: "ぶんか",           start: 1804, end: 1818, period: "江戸" },
+  { name: "文政",     yomi: "ぶんせい",         start: 1818, end: 1830, period: "江戸" },
+  { name: "天保",     yomi: "てんぽう",         start: 1830, end: 1844, period: "江戸" },
+  { name: "弘化",     yomi: "こうか",           start: 1844, end: 1848, period: "江戸" },
+  { name: "嘉永",     yomi: "かえい",           start: 1848, end: 1854, period: "江戸" },
+  { name: "安政",     yomi: "あんせい",         start: 1854, end: 1860, period: "江戸" },
+  { name: "万延",     yomi: "まんえい",         start: 1860, end: 1861, period: "江戸" },
+  { name: "文久",     yomi: "ぶんきゅう",       start: 1861, end: 1864, period: "江戸" },
+  { name: "元治",     yomi: "げんじ",           start: 1864, end: 1865, period: "江戸" },
+  { name: "慶応",     yomi: "けいおう",         start: 1865, end: 1868, period: "江戸" },
+];
 
-// 入力名目 → 内部状態（下2桁=50のみ五十文緡=49実際文）
-function nomToVal(nom) {
-  const h = Math.floor(nom / 100), r = nom % 100;
-  return { h, l: r === 50 ? 49 : r };
+// 近代以降（明治〜）は一世一元で厳密管理
+const MODERN_ERAS = [
+  { name: "明治", yomi: "めいじ",      startYear: 1868, startMonth: 10, endYear: 1912, maxNen: 45,   period: "近代" },
+  { name: "大正", yomi: "たいしょう",  startYear: 1912, startMonth:  8, endYear: 1926, maxNen: 15,   period: "近代" },
+  { name: "昭和", yomi: "しょうわ",    startYear: 1926, startMonth: 12, endYear: 1989, maxNen: 64,   period: "近代" },
+  { name: "平成", yomi: "へいせい",    startYear: 1989, startMonth:  1, endYear: 2019, maxNen: 31,   period: "近代" },
+  { name: "令和", yomi: "れいわ",      startYear: 2019, startMonth:  5, endYear: null,  maxNen: null, period: "近代" },
+];
+
+// 時代区分の表示順
+const PERIOD_ORDER = ["近代", "江戸", "室町", "南北朝（北朝）", "南北朝（南朝）", "鎌倉", "平安", "奈良"];
+// 時代区分の色（背景）
+const PERIOD_COLORS = {
+  "近代":         "#2c2c2c",
+  "江戸":         "#4a3728",
+  "室町":         "#3a3020",
+  "南北朝（北朝）": "#1e3040",
+  "南北朝（南朝）": "#402020",
+
+  "鎌倉":         "#283830",
+  "平安":         "#382838",
+  "奈良":         "#383020",
+};
+
+// selectの選択肢を構築
+function buildSelectOptions() {
+  const sel = document.getElementById('era-select');
+
+  // 近代
+  const modGroup = document.createElement('optgroup');
+  modGroup.label = '近代（明治〜）';
+  MODERN_ERAS.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.name;
+    opt.textContent = `${e.name}（${e.yomi}）`;
+    modGroup.appendChild(opt);
+  });
+  sel.appendChild(modGroup);
+
+  // 江戸〜奈良を時代ごとにグループ化
+  const periodGroupOrder = ["江戸", "室町", "南北朝（北朝）", "南北朝（南朝）", "鎌倉", "平安", "奈良"];
+  periodGroupOrder.forEach(p => {
+    const eras = ERAS.filter(e => e.period === p).slice().reverse();
+    if (eras.length === 0) return;
+    const grp = document.createElement('optgroup');
+    grp.label = `${p}時代`;
+    eras.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.name + "|" + p; // 同名対策
+      opt.textContent = `${e.name}（${e.yomi}）`;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
 }
 
-// 内部状態 → 表示名目
-function valToDisplay(v) {
-  let h = v.h, l = v.l;
-  while (l >= 97) { h++; l -= 97; } // 端数から百文緡を作る
-  if (l === 49) l = 50;              // ちょうど49文の時だけ五十文緡
-  return h * 100 + l;
+// 年号→西暦
+function convertNengoToSeireki() {
+  const rawVal = document.getElementById('era-select').value;
+  const rawNen = parseInt(document.getElementById('era-year').value);
+  const noticeEl = document.getElementById('notice-nengo');
+  const resultEl = document.getElementById('result-nengo');
+
+  noticeEl.classList.remove('visible');
+  resultEl.classList.remove('visible');
+
+  if (!rawVal) { showNotice(noticeEl, '年号を選択してください。'); return; }
+  const nenInput = (!rawNen || isNaN(rawNen) || rawNen < 1) ? 1 : rawNen;
+
+  const eraName = rawVal.includes('|') ? rawVal.split('|')[0] : rawVal;
+
+  // 近代
+  const modernEra = MODERN_ERAS.find(e => e.name === eraName);
+  if (modernEra) {
+    if (modernEra.maxNen !== null && nenInput > modernEra.maxNen) {
+      showNotice(noticeEl,
+        `${eraName}は${modernEra.maxNen}年（西暦${modernEra.startYear + modernEra.maxNen - 1}年）が最後です。\n${eraName}${nenInput}年は実在しない年号表記です。`);
+      return;
+    }
+    const seireki = modernEra.startYear + nenInput - 1;
+    showResult('result-nengo', `${seireki}年`, `${eraName}${nenInput}年 → 西暦${seireki}年`);
+    return;
+  }
+
+  // 古代〜江戸（同名元号があるので period も考慮）
+  const period = rawVal.includes('|') ? rawVal.split('|')[1] : null;
+  let era = period
+    ? ERAS.find(e => e.name === eraName && e.period === period)
+    : ERAS.find(e => e.name === eraName);
+  if (!era) { showNotice(noticeEl, '年号が見つかりません。'); return; }
+
+  const maxNen = era.end !== null ? era.end - era.start + 1 : null;
+  if (maxNen !== null && nenInput > maxNen) {
+    showNotice(noticeEl,
+      `${eraName}（${era.period}）は${maxNen}年（西暦${era.end}年）が最後です。\n${eraName}${nenInput}年は実在しない年号表記です。`);
+    return;
+  }
+  const seireki = era.start + nenInput - 1;
+  showResult('result-nengo', `${seireki}年`, `${eraName}${nenInput}年 → 西暦${seireki}年`);
 }
 
-// 加算
-function addVals(a, b) { return { h: a.h + b.h, l: a.l + b.l }; }
+// 西暦→年号
+function convertSeirekiToNengo() {
+  const seireki = parseInt(document.getElementById('seireki-year').value);
+  const noticeEl = document.getElementById('notice-seireki');
+  const resultEl = document.getElementById('result-seireki');
 
-// 減算
-function subVals(aVal, bNom) {
-  let { h: aH, l: aL } = aVal;
-  const bH = Math.floor(bNom / 100), bL = bNom % 100;
+  noticeEl.classList.remove('visible');
+  resultEl.classList.remove('visible');
 
-  // aが五十文緡(aL=49)、bが五十文緡(bL=50)なら相殺して0
-  let aLeff = aL, bLeff = bL;
-  if (aL === 49 && bL === 50) { aLeff = 0; bLeff = 0; }
+  if (!seireki || isNaN(seireki) || seireki < 1) {
+    showNotice(noticeEl, '有効な西暦年（1以上の整数）を入力してください。'); return;
+  }
 
-  if (aLeff >= bLeff) return { h: aH - bH, l: aLeff - bLeff };
+  // 近代以降
+  if (seireki >= 1868) {
+    // その西暦年に該当する元号を全て抽出
+    const modernCandidates = MODERN_ERAS.filter(e => {
+      const endY = e.maxNen !== null ? e.startYear + e.maxNen - 1 : 9999;
+      return seireki >= e.startYear && seireki <= endY;
+    });
+    if (modernCandidates.length > 0) {
+      // 開始年が最も遅いもの（改元後）を主結果に
+      modernCandidates.sort((a, b) => b.startYear - a.startYear);
+      const mainM = modernCandidates[0];
+      const nen = seireki - mainM.startYear + 1;
+      const nenStr = nen === 1 ? '元' : String(nen);
+      let sub = `西暦${seireki}年 → ${mainM.name}${nenStr}年`;
+      // 同年の改元前元号を注記
+      const prevMs = modernCandidates.slice(1);
+      if (prevMs.length > 0) {
+        const prevStr = prevMs.map(e => {
+          const n = seireki - e.startYear + 1;
+          return `${e.name}${n}年`;
+        }).join('・');
+        sub += ` ／ 改元前：${prevStr}`;
+      }
+      showResult('result-seireki', `${mainM.name}${nenStr}年`, sub);
+      return;
+    }
+  }
 
-  // 繰り下がり：百文緡を崩す
-  if (aH > bH) return { h: aH - 1 - bH, l: aLeff + 97 - bLeff };
+  // 古代〜江戸
+  const candidates = ERAS.filter(e => {
+    const endY = e.end !== null ? e.end : 9999;
+    return seireki >= e.start && seireki <= endY;
+  });
 
-  const need = (bH + 1) - aH;
-  return { h: aH + need - 1 - bH, l: aLeff + need * 97 + 97 - bLeff };
+  if (candidates.length === 0) {
+    showNotice(noticeEl, `西暦${seireki}年に対応する年号が見つかりません。`); return;
+  }
+
+  // 南北朝期間かどうか判定
+  const isNanbokucho = candidates.some(e => e.period.startsWith('南北朝'));
+
+  let sub;
+  if (isNanbokucho) {
+    // 北朝・南朝それぞれで開始年順にソート（遅い＝改元後が先頭）
+    const hokuchoEras = candidates.filter(e => e.period === '南北朝（北朝）').sort((a,b) => b.start - a.start);
+    const nanchoEras  = candidates.filter(e => e.period === '南北朝（南朝）').sort((a,b) => b.start - a.start);
+    const hokuchoEra = hokuchoEras[0]; // 改元後（主）
+    const nanchoEra  = nanchoEras[0];  // 改元後（主）
+
+    // 改元前の元号（同朝で複数ある場合の残り）
+    const hokuchoPrev = hokuchoEras.slice(1); // 北朝の改元前
+    const nanchoPrev  = nanchoEras.slice(1);  // 南朝の改元前
+
+    if (hokuchoEra) {
+      const nen = seireki - hokuchoEra.start + 1;
+      sub = `西暦${seireki}年 → ${hokuchoEra.name}${nen}年（北朝）`;
+      // 北朝の改元前年号
+      if (hokuchoPrev.length > 0) {
+        const prevStr = hokuchoPrev.map(e => `${e.name}${seireki - e.start + 1}年`).join('・');
+        sub += ` ／ 北朝改元前：${prevStr}`;
+      }
+      // 南朝
+      if (nanchoEra) {
+        const nenN = seireki - nanchoEra.start + 1;
+        sub += ` ／ 南朝：${nanchoEra.name}${nenN}年`;
+        if (nanchoPrev.length > 0) {
+          const prevStr = nanchoPrev.map(e => `${e.name}${seireki - e.start + 1}年`).join('・');
+          sub += `（改元前：${prevStr}）`;
+        }
+      }
+      showResult('result-seireki', `${hokuchoEra.name}${nen}年`, sub);
+    } else if (nanchoEra) {
+      // 北朝元号がない年（南朝のみ）
+      const nen = seireki - nanchoEra.start + 1;
+      sub = `西暦${seireki}年 → ${nanchoEra.name}${nen}年（南朝）`;
+      if (nanchoPrev.length > 0) {
+        const prevStr = nanchoPrev.map(e => `${e.name}${seireki - e.start + 1}年`).join('・');
+        sub += ` ／ 改元前：${prevStr}`;
+      }
+      showResult('result-seireki', `${nanchoEra.name}${nen}年`, sub);
+    }
+  } else {
+    // 通常：最も開始年が新しい元号を採用、同年同startはERAS配列の後ろ（後の改元）を優先
+    const withIdx = candidates.map((e, i) => ({ e, i: ERAS.indexOf(e) }));
+    withIdx.sort((a, b) => b.e.start - a.e.start || b.i - a.i);
+    const era = withIdx[0].e;
+    const nen = seireki - era.start + 1;
+    sub = `西暦${seireki}年 → ${era.name}${nen}年（${era.period}）`;
+    if (withIdx.length > 1) {
+      const prevStr = withIdx.slice(1).map(({e}) => `${e.name}${seireki - e.start + 1}年`).join('・');
+      sub += ` ／ 改元前：${prevStr}`;
+    }
+    showResult('result-seireki', `${era.name}${nen}年`, sub);
+  }
 }
 
-// 乗算：繰り返し加算
-function mulVals(aVal, bNom) {
-  if (bNom <= 0) return { h: 0, l: 0 };
-  if (bNom > 5000) return { h: 0, l: aVal.h * 97 * bNom + aVal.l * bNom }; // 近似
-  let result = { h: 0, l: 0 };
-  for (let i = 0; i < bNom; i++) result = addVals(result, aVal);
-  return result;
+function showNotice(el, msg) {
+  el.textContent = msg;
+  el.classList.add('visible');
 }
 
-// 除算：百文緡の数を割り、余りをばらして端数と合わせて割る
-function divVals(aVal, bNom) {
-  if (bNom === 0) return null;
-  const aNom = valToDisplay(aVal);
-  const aH = Math.floor(aNom / 100);
-  const aL = aNom % 100;
-  const aLActual = aL === 50 ? 49 : aL;
-  const qH = Math.floor(aH / bNom);
-  const remH = aH % bNom;
-  const combined = remH * 97 + aLActual;
-  const qL = Math.floor(combined / bNom);
-  const rem = combined % bNom;
-  return { q: qH * 100 + qL, rem };
+function showResult(id, main, sub) {
+  const box = document.getElementById(id);
+  box.querySelector('.result-main').textContent = main;
+  box.querySelector('.result-sub').textContent = sub;
+  box.classList.remove('visible');
+  void box.offsetWidth;
+  box.classList.add('visible');
 }
 
-// State
-let currentVal = { h: 0, l: 0 };
-let currentNominalStr = '0';
-let prevVal = null;
-let prevNominalStr = '0';
-let op = null;
-let justComputed = false;
-let waitingForOperand = false;
+// タブ切替
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'nengo') || (i === 1 && tab === 'seireki'));
+  });
+  document.getElementById('panel-nengo').classList.toggle('active', tab === 'nengo');
+  document.getElementById('panel-seireki').classList.toggle('active', tab === 'seireki');
+}
 
-function updateDisplay() {
-  const disp = document.getElementById('disp');
-  const dispOp = document.getElementById('dispOp');
-  const dispActual = document.getElementById('dispActual');
+// 一覧表示
+let eraTableBuilt = false;
+function toggleEraList() {
+  const wrapper = document.getElementById('era-table-wrapper');
+  const btn = document.querySelector('.era-list-toggle button');
+  if (wrapper.classList.contains('visible')) {
+    wrapper.classList.remove('visible');
+    btn.textContent = '年号一覧を表示';
+  } else {
+    if (!eraTableBuilt) { buildEraTable(); eraTableBuilt = true; }
+    wrapper.classList.add('visible');
+    btn.textContent = '年号一覧を閉じる';
+  }
+}
 
-  disp.textContent = currentNominalStr;
-  disp.classList.remove('flash'); void disp.offsetWidth; disp.classList.add('flash');
+function buildEraTable() {
+  const tbody = document.querySelector('#era-table tbody');
 
-  dispOp.textContent = (op && prevVal !== null) ? valToDisplay(prevVal) + ' ' + op : '';
-
-  // 実際文数の表示
-  if (!currentNominalStr.includes('余')) {
-    const nom = parseInt(currentNominalStr) || 0;
-    const actual = currentVal.h * 97 + currentVal.l;
-    if (nom !== 0 && actual !== nom) {
-      dispActual.textContent = '実際 ' + actual + ' 文';
+  // 時代ごとにセクションを作る
+  PERIOD_ORDER.forEach(period => {
+    let rows = [];
+    if (period === "近代") {
+      rows = MODERN_ERAS.map(e => ({
+        name: e.name, yomi: e.yomi,
+        startY: e.startYear,
+        endY: e.maxNen !== null ? e.startYear + e.maxNen - 1 : null,
+        period: "近代"
+      }));
     } else {
-      dispActual.textContent = '';
+      rows = ERAS.filter(e => e.period === period)
+        .map(e => ({ name: e.name, yomi: e.yomi, startY: e.start, endY: e.end, period: e.period }));
     }
-  } else {
-    dispActual.textContent = '';
-  }
+    if (rows.length === 0) return;
+
+    // ヘッダー行
+    const headerTr = document.createElement('tr');
+    const color = PERIOD_COLORS[period] || "#333";
+    headerTr.innerHTML = `<td colspan="5" style="background:${color};color:#f5f0e8;font-weight:600;letter-spacing:0.25em;padding:8px 14px;font-size:0.82rem;">${period}時代</td>`;
+    tbody.appendChild(headerTr);
+
+    rows.forEach(e => {
+      const tr = document.createElement('tr');
+      const endStr = e.endY !== null ? `${e.endY}年` : '現在';
+      tr.innerHTML = `<td>${e.name}</td><td>${e.yomi}</td><td>${e.startY}年</td><td>${endStr}</td><td class="era-period">${e.period}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
 }
 
-function setCurrentFromNom(nomStr) {
-  currentNominalStr = nomStr;
-  currentVal = nomToVal(parseInt(nomStr) || 0);
-}
+// 初期化
+buildSelectOptions();
 
-function setCurrentFromVal(v) {
-  currentVal = v;
-  currentNominalStr = String(valToDisplay(v));
-}
-
-function inputDigit(d) {
-  if (justComputed || waitingForOperand) { currentNominalStr = d; justComputed = false; waitingForOperand = false; }
-  else { currentNominalStr = currentNominalStr === '0' ? d : currentNominalStr + d; }
-  if (currentNominalStr.length > 10) currentNominalStr = currentNominalStr.slice(0, 10);
-  currentVal = nomToVal(parseInt(currentNominalStr) || 0);
-  updateDisplay();
-}
-
-function input10() {
-  if (justComputed || waitingForOperand) { currentNominalStr = '10'; justComputed = false; waitingForOperand = false; }
-  else if (currentNominalStr === '0') { currentNominalStr = '10'; }
-  else { currentNominalStr += '0'; }
-  if (currentNominalStr.length > 10) currentNominalStr = currentNominalStr.slice(0, 10);
-  currentVal = nomToVal(parseInt(currentNominalStr) || 0);
-  updateDisplay();
-}
-
-function input100() {
-  if (justComputed || waitingForOperand) { currentNominalStr = '100'; justComputed = false; waitingForOperand = false; }
-  else if (currentNominalStr === '0') { currentNominalStr = '100'; }
-  else { currentNominalStr += '00'; }
-  if (currentNominalStr.length > 10) currentNominalStr = currentNominalStr.slice(0, 10);
-  currentVal = nomToVal(parseInt(currentNominalStr) || 0);
-  updateDisplay();
-}
-
-function applyOp(aVal, bNomStr, o) {
-  const bNom = parseInt(bNomStr) || 0;
-  const bVal = nomToVal(bNom);
-  switch (o) {
-    case '+': return { type: 'val', val: addVals(aVal, bVal) };
-    case '−': return { type: 'val', val: subVals(aVal, bNom) };
-    case '×': return { type: 'val', val: mulVals(aVal, bNom) };
-    case '÷': return { type: 'div', val: divVals(aVal, bNom) };
-  }
-}
-
-function inputOp(o) {
-  justComputed = false;
-  if (prevVal !== null && op && !waitingForOperand) {
-    const res = applyOp(prevVal, currentNominalStr, op);
-    if (res) {
-      const v = res.type === 'div' ? nomToVal(res.val.q) : res.val;
-      prevVal = v; setCurrentFromVal(v);
-    }
-  } else {
-    prevVal = currentVal;
-    prevNominalStr = currentNominalStr;
-  }
-  op = o; waitingForOperand = true;
-  updateDisplay();
-}
-
-function compute() {
-  if (prevVal === null || !op) return;
-  const res = applyOp(prevVal, currentNominalStr, op);
-  if (!res || res.val === null) {
-    currentNominalStr = 'エラー'; currentVal = { h: 0, l: 0 };
-  } else if (res.type === 'div') {
-    const { q, rem } = res.val;
-    currentVal = nomToVal(q);
-    currentNominalStr = rem > 0 ? String(q) + ' 余 ' + rem : String(q);
-  } else {
-    setCurrentFromVal(res.val);
-  }
-  prevVal = null; prevNominalStr = '0'; op = null; justComputed = true; waitingForOperand = false;
-  updateDisplay();
-}
-
-function clearAll() {
-  currentVal = { h: 0, l: 0 }; currentNominalStr = '0';
-  prevVal = null; prevNominalStr = '0'; op = null; justComputed = false; waitingForOperand = false;
-  updateDisplay();
-}
-
-function clearEntry() {
-  currentVal = { h: 0, l: 0 }; currentNominalStr = '0'; justComputed = false; updateDisplay();
-}
-
-function toggleSign() {
-  const nom = parseInt(currentNominalStr);
-  if (!isNaN(nom)) { currentNominalStr = String(-nom); currentVal = nomToVal(-nom); }
-  updateDisplay();
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key >= '0' && e.key <= '9') inputDigit(e.key);
-  else if (e.key === '+') inputOp('+');
-  else if (e.key === '-') inputOp('−');
-  else if (e.key === '*') inputOp('×');
-  else if (e.key === '/') { e.preventDefault(); inputOp('÷'); }
-  else if (e.key === 'Enter' || e.key === '=') compute();
-  else if (e.key === 'Escape') clearAll();
-  else if (e.key === 'Backspace') {
-    if (currentNominalStr.length > 1) currentNominalStr = currentNominalStr.slice(0, -1);
-    else currentNominalStr = '0';
-    currentVal = nomToVal(parseInt(currentNominalStr) || 0);
-    updateDisplay();
-  }
+// Enterキー対応
+document.getElementById('era-year').addEventListener('keydown', e => {
+  if (e.key === 'Enter') convertNengoToSeireki();
 });
-
-updateDisplay();
+document.getElementById('seireki-year').addEventListener('keydown', e => {
+  if (e.key === 'Enter') convertSeirekiToNengo();
+});
 </script>
 </body>
 </html>
