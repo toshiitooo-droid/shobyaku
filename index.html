@@ -368,62 +368,81 @@
 // ============================================================
 // 省陌法　計算ロジック
 //
-// 内部状態は常に「実際文数」で保持。
-// 入力（名目）→実際変換、表示時に実際→名目変換。
+// 内部状態：{h: 百文緡数, l: 実際端数文}
+// 入力(名目) → nomToVal → 内部状態
+// 内部状態 → valToDisplay → 表示名目
 //
 //   百文緡：100名目 = 97実際
-//   五十文緡：49実際文が残った時に50名目として表示
+//   五十文緡：端数が百文緡化後に49文以上残った時、50名目として表示
 // ============================================================
 
-// 入力名目 → 実際文数
-// 下2桁=50のみ49実際文（五十文緡）、それ以外はそのまま
-function nominalToActual(n) {
-  if (n < 0) return -nominalToActual(-n);
-  const h = Math.floor(n / 100); const r = n % 100;
-  return h * 97 + (r === 50 ? 49 : r);
+// 入力名目 → 内部状態（下2桁=50のみ五十文緡=49実際文）
+function nomToVal(nom) {
+  const h = Math.floor(nom / 100), r = nom % 100;
+  return { h, l: r === 50 ? 49 : r };
 }
 
-// 実際文数 → 表示名目
-// 97文ずつ百文緡、残り>=49なら五十文緡1つ
-function actualToNominal(a) {
-  if (a < 0) return -actualToNominal(-a);
-  const h = Math.floor(a / 97); const r = a % 97;
-  return h * 100 + (r >= 49 ? 50 + (r - 49) : r);
+// 内部状態 → 表示名目
+function valToDisplay(v) {
+  let h = v.h, l = v.l;
+  while (l >= 97) { h++; l -= 97; } // 端数から百文緡を作る
+  if (l === 49) l = 50;              // ちょうど49文の時だけ五十文緡
+  return h * 100 + l;
 }
 
-// 加算：実際文で合計
-function shomakuAdd(aActual, bActual) {
-  return aActual + bActual;
-}
+// 加算
+function addVals(a, b) { return { h: a.h + b.h, l: a.l + b.l }; }
 
-// 減算：緡はそのまま。五十文緡→百文緡の順で必要な時だけ崩す（名目ベース）
-function shomakuSubNominal(a, b) {
-  let aNom = actualToNominal(a);
-  let bNom = actualToNominal(b);
-  let aH = Math.floor(aNom / 100), aL = aNom % 100;
+// 減算
+function subVals(aVal, bNom) {
+  let { h: aH, l: aL } = aVal;
   const bH = Math.floor(bNom / 100), bL = bNom % 100;
 
-  // 五十文緡を先に崩す
-  if (aL === 50) aL = 49;
+  // aが五十文緡(aL=49)、bが五十文緡(bL=50)なら相殺して0
+  let aLeff = aL, bLeff = bL;
+  if (aL === 49 && bL === 50) { aLeff = 0; bLeff = 0; }
 
-  if (aL >= bL) return nominalToActual((aH - bH) * 100 + (aL - bL));
+  if (aLeff >= bLeff) return { h: aH - bH, l: aLeff - bLeff };
 
-  // 百文緡を崩す
-  const deficit = (bH + 1) - aH;
-  if (deficit > 0) { aH += deficit; aL += deficit * 97; }
-  aH -= 1; aL += 97;
-  if (aL === 50) aL = 49;
+  // 繰り下がり：百文緡を崩す
+  if (aH > bH) return { h: aH - 1 - bH, l: aLeff + 97 - bLeff };
 
-  return nominalToActual((aH - bH) * 100 + (aL - bL));
+  const need = (bH + 1) - aH;
+  return { h: aH + need - 1 - bH, l: aLeff + need * 97 + 97 - bLeff };
 }
 
-// State（内部は実際文数）
-let currentActual = 0;   // 現在入力中の実際文数
-let prevActual = null;    // 演算子前の実際文数
+// 乗算：繰り返し加算
+function mulVals(aVal, bNom) {
+  if (bNom <= 0) return { h: 0, l: 0 };
+  if (bNom > 5000) return { h: 0, l: aVal.h * 97 * bNom + aVal.l * bNom }; // 近似
+  let result = { h: 0, l: 0 };
+  for (let i = 0; i < bNom; i++) result = addVals(result, aVal);
+  return result;
+}
+
+// 除算：百文緡の数を割り、余りをばらして端数と合わせて割る
+function divVals(aVal, bNom) {
+  if (bNom === 0) return null;
+  const aNom = valToDisplay(aVal);
+  const aH = Math.floor(aNom / 100);
+  const aL = aNom % 100;
+  const aLActual = aL === 50 ? 49 : aL;
+  const qH = Math.floor(aH / bNom);
+  const remH = aH % bNom;
+  const combined = remH * 97 + aLActual;
+  const qL = Math.floor(combined / bNom);
+  const rem = combined % bNom;
+  return { q: qH * 100 + qL, rem };
+}
+
+// State
+let currentVal = { h: 0, l: 0 };
+let currentNominalStr = '0';
+let prevVal = null;
+let prevNominalStr = '0';
 let op = null;
 let justComputed = false;
 let waitingForOperand = false;
-let currentNominalStr = '0'; // 表示用文字列
 
 function updateDisplay() {
   const disp = document.getElementById('disp');
@@ -433,18 +452,14 @@ function updateDisplay() {
   disp.textContent = currentNominalStr;
   disp.classList.remove('flash'); void disp.offsetWidth; disp.classList.add('flash');
 
-  if (op && prevActual !== null) {
-    dispOp.textContent = actualToNominal(prevActual) + ' ' + op;
-  } else {
-    dispOp.textContent = '';
-  }
+  dispOp.textContent = (op && prevVal !== null) ? valToDisplay(prevVal) + ' ' + op : '';
 
-  if (currentNominalStr.includes('余')) {
-    dispActual.textContent = '';
-  } else if (currentActual !== 0) {
-    const nom = parseInt(currentNominalStr);
-    if (!isNaN(nom) && nom !== currentActual) {
-      dispActual.textContent = '実際 ' + currentActual + ' 文';
+  // 実際文数の表示
+  if (!currentNominalStr.includes('余')) {
+    const nom = parseInt(currentNominalStr) || 0;
+    const actual = currentVal.h * 97 + currentVal.l;
+    if (nom !== 0 && actual !== nom) {
+      dispActual.textContent = '実際 ' + actual + ' 文';
     } else {
       dispActual.textContent = '';
     }
@@ -453,125 +468,98 @@ function updateDisplay() {
   }
 }
 
-function setCurrentFromNominalStr(s) {
-  const nom = parseInt(s) || 0;
-  currentActual = nominalToActual(nom);
-  currentNominalStr = s;
+function setCurrentFromNom(nomStr) {
+  currentNominalStr = nomStr;
+  currentVal = nomToVal(parseInt(nomStr) || 0);
 }
 
-function setCurrentFromActual(a) {
-  currentActual = a;
-  currentNominalStr = String(actualToNominal(a));
+function setCurrentFromVal(v) {
+  currentVal = v;
+  currentNominalStr = String(valToDisplay(v));
 }
 
 function inputDigit(d) {
-  if (justComputed || waitingForOperand) {
-    currentNominalStr = d; justComputed = false; waitingForOperand = false;
-  } else {
-    currentNominalStr = currentNominalStr === '0' ? d : currentNominalStr + d;
-  }
+  if (justComputed || waitingForOperand) { currentNominalStr = d; justComputed = false; waitingForOperand = false; }
+  else { currentNominalStr = currentNominalStr === '0' ? d : currentNominalStr + d; }
   if (currentNominalStr.length > 10) currentNominalStr = currentNominalStr.slice(0, 10);
-  currentActual = nominalToActual(parseInt(currentNominalStr) || 0);
+  currentVal = nomToVal(parseInt(currentNominalStr) || 0);
   updateDisplay();
 }
 
 function input10() {
   if (justComputed || waitingForOperand) { currentNominalStr = '10'; justComputed = false; waitingForOperand = false; }
   else if (currentNominalStr === '0') { currentNominalStr = '10'; }
-  else { currentNominalStr = currentNominalStr + '0'; }
+  else { currentNominalStr += '0'; }
   if (currentNominalStr.length > 10) currentNominalStr = currentNominalStr.slice(0, 10);
-  currentActual = nominalToActual(parseInt(currentNominalStr) || 0);
+  currentVal = nomToVal(parseInt(currentNominalStr) || 0);
   updateDisplay();
 }
 
 function input100() {
   if (justComputed || waitingForOperand) { currentNominalStr = '100'; justComputed = false; waitingForOperand = false; }
   else if (currentNominalStr === '0') { currentNominalStr = '100'; }
-  else { currentNominalStr = currentNominalStr + '00'; }
+  else { currentNominalStr += '00'; }
   if (currentNominalStr.length > 10) currentNominalStr = currentNominalStr.slice(0, 10);
-  currentActual = nominalToActual(parseInt(currentNominalStr) || 0);
+  currentVal = nomToVal(parseInt(currentNominalStr) || 0);
   updateDisplay();
+}
+
+function applyOp(aVal, bNomStr, o) {
+  const bNom = parseInt(bNomStr) || 0;
+  const bVal = nomToVal(bNom);
+  switch (o) {
+    case '+': return { type: 'val', val: addVals(aVal, bVal) };
+    case '−': return { type: 'val', val: subVals(aVal, bNom) };
+    case '×': return { type: 'val', val: mulVals(aVal, bNom) };
+    case '÷': return { type: 'div', val: divVals(aVal, bNom) };
+  }
 }
 
 function inputOp(o) {
   justComputed = false;
-  if (prevActual !== null && op && !waitingForOperand) {
-    const result = applyOp(prevActual, currentActual, op);
-    if (result !== null) {
-      const val = (typeof result === 'object') ? result.q : result;
-      prevActual = val; setCurrentFromActual(val);
+  if (prevVal !== null && op && !waitingForOperand) {
+    const res = applyOp(prevVal, currentNominalStr, op);
+    if (res) {
+      const v = res.type === 'div' ? nomToVal(res.val.q) : res.val;
+      prevVal = v; setCurrentFromVal(v);
     }
   } else {
-    prevActual = currentActual;
+    prevVal = currentVal;
+    prevNominalStr = currentNominalStr;
   }
   op = o; waitingForOperand = true;
   updateDisplay();
 }
 
-function applyOp(aActual, bActual, o) {
-  switch(o) {
-    case '+': return shomakuAdd(aActual, bActual);
-    case '−': return shomakuSubNominal(aActual, bActual);
-    case '×': {
-      // bActualを名目に戻してから整数として繰り返し加算
-      const bNom = actualToNominal(bActual);
-      if (bNom <= 0) return 0;
-      if (bNom > 5000) return Math.round(aActual * bNom);
-      let r = 0;
-      for (let i = 0; i < bNom; i++) r = shomakuAdd(r, aActual);
-      return r;
-    }
-    case '÷': {
-      // 被除数：実際文→名目に変換して百文緡と端数に分解
-      const aNom = actualToNominal(aActual);
-      // 除数：名目のまま整数として使う
-      const bNom = actualToNominal(bActual);
-      if (bNom === 0) return null;
-      const aH = Math.floor(aNom / 100);
-      const aL = aNom % 100;
-      const aLActual = aL === 50 ? 49 : aL;
-      const qH = Math.floor(aH / bNom);
-      const remH = aH % bNom;
-      const combined = remH * 97 + aLActual;
-      const qL = Math.floor(combined / bNom);
-      const rem = combined % bNom;
-      return { q: qH * 100 + qL, rem };
-    }
-  }
-}
-
 function compute() {
-  if (prevActual === null || !op) return;
-  const result = applyOp(prevActual, currentActual, op);
-  if (result === null) {
-    currentNominalStr = 'エラー'; currentActual = 0;
-  } else if (op === '÷' && typeof result === 'object') {
-    // result.qは名目文数
-    currentActual = nominalToActual(result.q);
-    currentNominalStr = String(result.q);
-    if (result.rem > 0) {
-      currentNominalStr = String(result.q) + ' 余 ' + result.rem;
-    }
+  if (prevVal === null || !op) return;
+  const res = applyOp(prevVal, currentNominalStr, op);
+  if (!res || res.val === null) {
+    currentNominalStr = 'エラー'; currentVal = { h: 0, l: 0 };
+  } else if (res.type === 'div') {
+    const { q, rem } = res.val;
+    currentVal = nomToVal(q);
+    currentNominalStr = rem > 0 ? String(q) + ' 余 ' + rem : String(q);
   } else {
-    setCurrentFromActual(result);
+    setCurrentFromVal(res.val);
   }
-  prevActual = null; op = null; justComputed = true; waitingForOperand = false;
+  prevVal = null; prevNominalStr = '0'; op = null; justComputed = true; waitingForOperand = false;
   updateDisplay();
 }
 
 function clearAll() {
-  currentActual = 0; currentNominalStr = '0';
-  prevActual = null; op = null; justComputed = false; waitingForOperand = false;
+  currentVal = { h: 0, l: 0 }; currentNominalStr = '0';
+  prevVal = null; prevNominalStr = '0'; op = null; justComputed = false; waitingForOperand = false;
   updateDisplay();
 }
 
 function clearEntry() {
-  currentActual = 0; currentNominalStr = '0'; justComputed = false; updateDisplay();
+  currentVal = { h: 0, l: 0 }; currentNominalStr = '0'; justComputed = false; updateDisplay();
 }
 
 function toggleSign() {
-  currentActual = -currentActual;
-  currentNominalStr = String(actualToNominal(currentActual));
+  const nom = parseInt(currentNominalStr);
+  if (!isNaN(nom)) { currentNominalStr = String(-nom); currentVal = nomToVal(-nom); }
   updateDisplay();
 }
 
@@ -586,7 +574,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Backspace') {
     if (currentNominalStr.length > 1) currentNominalStr = currentNominalStr.slice(0, -1);
     else currentNominalStr = '0';
-    currentActual = nominalToActual(parseInt(currentNominalStr) || 0);
+    currentVal = nomToVal(parseInt(currentNominalStr) || 0);
     updateDisplay();
   }
 });
