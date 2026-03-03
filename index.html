@@ -1003,34 +1003,60 @@ function toggleEraList() {
 function buildEraTable() {
   const tbody = document.querySelector('#era-table tbody');
 
-  // 時代ごとにセクションを作る
-  PERIOD_ORDER.forEach(period => {
-    let rows = [];
-    if (period === "近代") {
-      rows = MODERN_ERAS.map(e => ({
+  // 南北朝以外を西暦降順で並べたリスト
+  const nonNanbokucho = [
+    ...MODERN_ERAS.map((e, i) => ({
+      name: e.name, yomi: e.yomi,
+      startY: e.startYear,
+      endY: e.maxNen !== null ? e.startYear + e.maxNen - 1 : null,
+      period: "近代", idx: i
+    })),
+    ...ERAS.filter(e => !e.period.startsWith('南北朝'))
+      .map((e, i) => ({
         name: e.name, yomi: e.yomi,
-        startY: e.startYear,
-        endY: e.maxNen !== null ? e.startYear + e.maxNen - 1 : null,
-        period: "近代"
-      }));
-    } else {
-      rows = ERAS.filter(e => e.period === period)
-        .map(e => ({ name: e.name, yomi: e.yomi, startY: e.start, endY: e.end, period: e.period }));
+        startY: e.start, endY: e.end,
+        period: e.period, idx: ERAS.indexOf(e)
+      }))
+  ];
+  nonNanbokucho.sort((a, b) => b.startY - a.startY || b.idx - a.idx);
+
+  // 南北朝ブロック（北朝・南朝それぞれ降順）
+  const hokuchoRows = ERAS.filter(e => e.period === '南北朝（北朝）')
+    .map(e => ({ name: e.name, yomi: e.yomi, startY: e.start, endY: e.end, period: e.period, idx: ERAS.indexOf(e) }))
+    .sort((a, b) => b.startY - a.startY || b.idx - a.idx);
+  const nanchoRows = ERAS.filter(e => e.period === '南北朝（南朝）')
+    .map(e => ({ name: e.name, yomi: e.yomi, startY: e.start, endY: e.end, period: e.period, idx: ERAS.indexOf(e) }))
+    .sort((a, b) => b.startY - a.startY || b.idx - a.idx);
+
+  // 南北朝ブロックを室町の直後（鎌倉の直前）に差し込む
+  const kamakura = nonNanbokucho.find(e => e.period === '鎌倉');
+  const insertIdx = kamakura ? nonNanbokucho.indexOf(kamakura) : nonNanbokucho.length;
+
+  // 描画：室町以前のブロック → 北朝ブロック → 南朝ブロック → 残り（鎌倉以降）
+  const before = nonNanbokucho.slice(0, insertIdx);
+  const after  = nonNanbokucho.slice(insertIdx);
+  const sections = [
+    ...before,
+    ...hokuchoRows,
+    ...nanchoRows,
+    ...after,
+  ];
+
+  // ヘッダーを挿入しながら描画
+  let lastPeriod = null;
+  sections.forEach(e => {
+    if (e.period !== lastPeriod) {
+      lastPeriod = e.period;
+      const headerTr = document.createElement('tr');
+      const color = PERIOD_COLORS[e.period] || "#333";
+      const label = e.period.startsWith('南北朝') ? e.period : `${e.period}時代`;
+      headerTr.innerHTML = `<td colspan="5" style="background:${color};color:#f5f0e8;font-weight:600;letter-spacing:0.25em;padding:8px 14px;font-size:0.82rem;">${label}</td>`;
+      tbody.appendChild(headerTr);
     }
-    if (rows.length === 0) return;
-
-    // ヘッダー行
-    const headerTr = document.createElement('tr');
-    const color = PERIOD_COLORS[period] || "#333";
-    headerTr.innerHTML = `<td colspan="5" style="background:${color};color:#f5f0e8;font-weight:600;letter-spacing:0.25em;padding:8px 14px;font-size:0.82rem;">${period}時代</td>`;
-    tbody.appendChild(headerTr);
-
-    rows.forEach(e => {
-      const tr = document.createElement('tr');
-      const endStr = e.endY !== null ? `${e.endY}年` : '現在';
-      tr.innerHTML = `<td>${e.name}</td><td>${e.yomi}</td><td>${e.startY}年</td><td>${endStr}</td><td class="era-period">${e.period}</td>`;
-      tbody.appendChild(tr);
-    });
+    const tr = document.createElement('tr');
+    const endStr = e.endY !== null ? `${e.endY}年` : '現在';
+    tr.innerHTML = `<td>${e.name}</td><td>${e.yomi}</td><td>${e.startY}年</td><td>${endStr}</td><td class="era-period">${e.period}</td>`;
+    tbody.appendChild(tr);
   });
 }
 
